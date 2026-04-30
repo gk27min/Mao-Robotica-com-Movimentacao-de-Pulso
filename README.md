@@ -79,5 +79,4 @@ Como o aplicativo depende de gravação de áudio em tempo real, o uso de emulad
 4. Instale e rode o aplicativo:
    ```bash
    flutter run
-   
-```
+   ```
