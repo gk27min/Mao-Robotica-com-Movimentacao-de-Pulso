@@ -1,0 +1,46 @@
+{
+  "sinais": [
+    {
+      "id": "oi",
+      "nome": "Oi",
+      "descricao": "Cumprimentar alguém, dizer olá, acenar de forma amigável.",
+      "sinonimos": ["olá", "hello", "bom dia", "boa tarde", "boa noite", "e aí", "fala", "salve"],
+      "angulos": {
+        "polegar": 0,
+        "indicador": 180,
+        "medio": 180,
+        "anelar": 180,
+        "minimo": 180,
+        "pulso": 90
+      }
+    },
+    {
+      "id": "tchau",
+      "nome": "Tchau",
+      "descricao": "Despedir-se, acenar dizendo adeus, encerrar uma conversa.",
+      "sinonimos": ["adeus", "até logo", "até mais", "falou", "bye", "xau", "até a próxima"],
+      "angulos": {
+        "polegar": 180,
+        "indicador": 180,
+        "medio": 180,
+        "anelar": 180,
+        "minimo": 180,
+        "pulso": 45
+      }
+    },
+    {
+      "id": "ok",
+      "nome": "OK",
+      "descricao": "Concordar, sinalizar que está tudo bem, fazer joia ou positivo.",
+      "sinonimos": ["beleza", "tudo bem", "concordo", "joia", "joinha", "show", "positivo", "certo", "sim"],
+      "angulos": {
+        "polegar": 180,
+        "indicador": 0,
+        "medio": 0,
+        "anelar": 0,
+        "minimo": 0,
+        "pulso": 90
+      }
+    }
+  ]
+}
