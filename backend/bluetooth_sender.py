@@ -1,62 +1,36 @@
 import asyncio
-import logging
 from bleak import BleakClient
 
-# Configuração de Logs
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("bluetooth_sender")
+# Endereço MAC exato da sua placa
+ARDUINO_MAC_ADDRESS = "b4:3a:45:b4:48:11"
 
-# =====================================================================
-# CONFIGURAÇÃO DO HARDWARE (MICROCONTROLADOR)
-# =====================================================================
-# ATENÇÃO: Substitua pelo MAC Address do seu microcontrolador.
-# No Linux/Windows, use o formato "XX:XX:XX:XX:XX:XX".
-# No macOS, use o UUID do dispositivo retornado pela varredura BLE.
-DEVICE_ADDRESS = "XX:XX:XX:XX:XX:XX"
+# UUID da Característica de Escrita (igual ao do código C++)
+CHARACTERISTIC_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214"
 
-# UUIDs extraídos do firmware do Arduino (mao_robotica_ble.ino)
-SERVICO_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214"
-CARACTERISTICA_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214"
-# =====================================================================
+# Como você está com a placa, desligamos a simulação
+SIMULAR_HARDWARE = False
 
 async def enviar_comando_bluetooth(codigo: int) -> bool:
-    """
-    Função assíncrona para conectar e enviar o código via Bluetooth Low Energy (BLE).
-    Retorna True se enviado com sucesso, False em caso de falha.
-    """
-    # Se o endereço de teste ainda estiver configurado, simulamos o envio com sucesso
-    if DEVICE_ADDRESS == "XX:XX:XX:XX:XX:XX":
-        logger.warning(
-            "MÓDO SIMULADO: O endereço MAC do Bluetooth está configurado como padrão ('XX:XX:XX:XX:XX:XX'). "
-            f"Simulando envio do comando {codigo} com sucesso."
-        )
+    if SIMULAR_HARDWARE:
+        print(f"[SIMULAÇÃO] Código {codigo} 'enviado' para o Arduino.")
+        await asyncio.sleep(1)
         return True
 
-    logger.info(f"Tentando conectar ao dispositivo BLE no endereço: {DEVICE_ADDRESS}...")
-    
+    print(f"Procurando LIBRAS-BOT no endereço {ARDUINO_MAC_ADDRESS}...")
     try:
-        # Estabelece conexão com o BleakClient
-        # Definimos um timeout de 5 segundos para evitar que o endpoint FastAPI trave por muito tempo
-        async with BleakClient(DEVICE_ADDRESS, timeout=5.0) as client:
+        # Aumentei o timeout para 10s para garantir a primeira conexão
+        async with BleakClient(ARDUINO_MAC_ADDRESS, timeout=10.0) as client:
             if client.is_connected:
-                logger.info(f"Conectado ao dispositivo: {DEVICE_ADDRESS}")
-                
-                # Converte o código (int) para um único byte (bytes de tamanho 1)
-                dado_para_enviar = bytes([codigo])
-                
-                logger.info(f"Enviando byte {codigo} para a característica {CARACTERISTICA_UUID}")
-                
-                # Escreve o comando na característica correspondente no Arduino
-                await client.write_gatt_char(CARACTERISTICA_UUID, dado_para_enviar)
-                logger.info("Dado enviado via Bluetooth com sucesso!")
+                print("Conectado fisicamente! Transmitindo comando...")
+                # O bleak exige que o envio seja em formato de bytes
+                await client.write_gatt_char(CHARACTERISTIC_UUID, bytes([codigo]))
+                print(f"Comando {codigo} entregue com sucesso!")
                 return True
-            else:
-                logger.error("Não foi possível estabelecer conexão com o dispositivo BLE.")
-                return False
-
     except Exception as e:
-        logger.error(
-            f"Erro de conexão/comunicação com a mão robótica via Bluetooth ({DEVICE_ADDRESS}): {e}. "
-            "Certifique-se de que o microcontrolador está ligado e com o firmware BLE ativo."
-        )
+        print(f"Erro na comunicação Bluetooth: {e}")
         return False
+
+# Pequeno bloco para testar o envio isoladamente sem precisar ligar o servidor FastAPI
+if __name__ == "__main__":
+    # Vamos simular o envio do comando 3 (Sinal de Paz)
+    asyncio.run(enviar_comando_bluetooth(3))
