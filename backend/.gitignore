@@ -1,0 +1,19 @@
+# Ambientes Virtuais
+venv/
+env/
+
+# Cache do Python (O compilador gera isso automaticamente)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Variáveis de Ambiente (Para proteger senhas e chaves no futuro)
+.env
+
+# Logs e Bancos de Dados locais
+*.log
+*.sqlite3
+
+# Arquivos do Sistema Operacional
+.DS_Store
+Thumbs.db
