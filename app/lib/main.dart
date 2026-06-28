@@ -130,7 +130,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // Endereço IP do servidor Python na rede local.
-  static const String _serverUrl = 'http://192.168.18.201:5000/api/comando';
+  static const String _serverUrl = 'http://192.168.1.4:5000/api/comando';
 
   Future<void> enviarComandoParaServidor(String texto, int messageIndex) async {
     final url = Uri.parse(_serverUrl);

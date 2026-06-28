@@ -1,33 +1,50 @@
-import asyncio
-import logging
 from bleak import BleakClient
+import asyncio
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("bluetooth_sender")
+MAC_ADDRESS = "b4:3a:45:b4:48:11"
+UUID_COMANDO = "19b10001-e8f2-537e-4f6c-d104768a1214"
+ble_client = None
 
-# Endereço MAC exato da sua placa LIBRAS-BOT
-ARDUINO_MAC_ADDRESS = "b4:3a:45:b4:48:11"
-
-# UUID da Característica de Escrita (igual ao do código C++)
-CHARACTERISTIC_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214"
-
-async def enviar_comando_bluetooth(codigo: int) -> bool:
-    logger.info(f"Procurando LIBRAS-BOT no endereço {ARDUINO_MAC_ADDRESS}...")
+async def conectar_bluetooth():
+    """Função chamada quando o servidor liga para abrir a conexão."""
+    global ble_client
+    print(f"Tentando conectar ao MAO-BOT em {MAC_ADDRESS}...")
+    ble_client = BleakClient(MAC_ADDRESS)
     try:
-        # Timeout de 10s para garantir a primeira conexão física
-        async with BleakClient(ARDUINO_MAC_ADDRESS, timeout=10.0) as client:
-            if client.is_connected:
-                logger.info("Conectado fisicamente! Transmitindo comando...")
-                # O bleak exige que o envio seja em formato de bytes
-                await client.write_gatt_char(CHARACTERISTIC_UUID, bytes([codigo]))
-                logger.info(f"Comando {codigo} entregue com sucesso!")
-                return True
+        await ble_client.connect()
+        if ble_client.is_connected:
+            print("Conectado ao MAO-BOT com sucesso! Mantendo conexão ativa.")
     except Exception as e:
-        logger.error(f"Erro na comunicação Bluetooth: {e}. Verifique se o Arduino está ligado.")
-        
-    return False
+        print(f"Aviso: Não foi possível conectar na inicialização. Erro: {e}")
 
-# Pequeno bloco para testar o envio isoladamente
-if __name__ == "__main__":
-    # Testando o envio do comando 3 (Sinal de Paz)
-    asyncio.run(enviar_comando_bluetooth(3))
+async def desconectar_bluetooth():
+    """Função chamada quando o servidor desliga para liberar o rádio do PC."""
+    global ble_client
+    if ble_client and ble_client.is_connected:
+        await ble_client.disconnect()
+        print("Desconectado do MAO-BOT.")
+
+async def enviar_comando_bluetooth(comando: int):
+    """Função que o server.py chama para enviar o número do gesto."""
+    global ble_client
+    
+    # Sistema de Autocura (Auto-reconnect)
+    if not ble_client or not ble_client.is_connected:
+        print("Bluetooth offline. Tentando reconectar agora...")
+        try:
+            if not ble_client:
+                ble_client = BleakClient(MAC_ADDRESS)
+            await ble_client.connect()
+            print("Reconexão bem-sucedida!")
+        except Exception as e:
+            print(f"Falha na reconexão: {e}")
+            return False # Retorna falso para o server.py saber que falhou
+            
+    # Transmissão do Comando
+    try:
+        await ble_client.write_gatt_char(UUID_COMANDO, bytearray([comando]))
+        print(f"Comando {comando} transmitido!")
+        return True
+    except Exception as e:
+        print(f"Falha na transmissão: {e}")
+        return False
