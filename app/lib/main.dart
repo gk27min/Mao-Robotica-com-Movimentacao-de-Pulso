@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -128,31 +129,46 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  // Endereço IP do servidor Python na rede local.
+  static const String _serverUrl = 'http://192.168.18.201:5000/api/comando';
+
   Future<void> enviarComandoParaServidor(String texto, int messageIndex) async {
-    print('=================================');
-    print('Enviando comando para o servidor HTTP: $texto');
-    print('=================================');
-    
-    final url = Uri.parse('http://192.168.1.100:5000/api/comando');
+    final url = Uri.parse(_serverUrl);
+
     try {
       final response = await http.post(
         url,
-        body: {'comando': texto},
-      ).timeout(const Duration(seconds: 1)); // Timeout minúsculo já que a API não existe
-      print('Resposta do servidor: ${response.statusCode}');
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'texto': texto}),
+      ).timeout(const Duration(seconds: 10));
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final sucesso = data['sucesso'] as bool;
+        final detalhes = data['detalhes'] as String;
+
+        setState(() {
+          _messages[messageIndex].text = sucesso
+              ? detalhes
+              : 'Não reconheci. $detalhes';
+          _messages[messageIndex].status = sucesso ? 'acting' : 'none';
+          _isProcessing = false;
+        });
+      } else {
+        setState(() {
+          _messages[messageIndex].text = 'Erro no servidor (${response.statusCode}).';
+          _messages[messageIndex].status = 'none';
+          _isProcessing = false;
+        });
+      }
     } catch (e) {
-      print('Erro de rede (esperado, API offline): $e');
-    }
-
-    // SIMULAÇÃO DO TEMPO DE PROCESSAMENTO/MOVIMENTO DA MÃO (3 SEGUNDOS)
-    await Future.delayed(const Duration(seconds: 3));
-
-    // Ao terminar, atualiza o status do robô para "agindo"
-    if (mounted) {
+      if (!mounted) return;
       setState(() {
-        _messages[messageIndex].text = 'Executando movimento...';
-        _messages[messageIndex].status = 'acting';
-        _isProcessing = false; // Libera o sistema para uma nova fala
+        _messages[messageIndex].text = 'Servidor inacessível. Verifique a conexão.';
+        _messages[messageIndex].status = 'none';
+        _isProcessing = false;
       });
     }
   }

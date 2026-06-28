@@ -43,7 +43,7 @@ class ComandoResponse(BaseModel):
     texto_original: str
     comando_detectado: Optional[str] = None
     codigo: Optional[int] = None
-    similaridade_cosseno: float
+    confianca: float
     detalhes: str
 
 # =====================================================================
@@ -69,7 +69,7 @@ async def processar_comando(requisicao: ComandoRequest):
             texto_original=texto,
             comando_detectado=None,
             codigo=None,
-            similaridade_cosseno=similaridade,
+            confianca=similaridade,
             detalhes=detalhes
         )
     
@@ -86,7 +86,7 @@ async def processar_comando(requisicao: ComandoRequest):
             texto_original=texto,
             comando_detectado=descricao,
             codigo=codigo,
-            similaridade_cosseno=similaridade,
+            confianca=similaridade,
             detalhes=detalhes
         )
 
@@ -98,7 +98,7 @@ async def processar_comando(requisicao: ComandoRequest):
         texto_original=texto,
         comando_detectado=descricao,
         codigo=codigo,
-        similaridade_cosseno=similaridade,
+        confianca=similaridade,
         detalhes=detalhes
     )
 
