@@ -1,4 +1,4 @@
-#!/home/mvssilva/Documents/Mao-Robotica-com-Movimentacao-de-Pulso/backend/.venv/bin/python3
+#!/home/debora/Mao-Robotica-com-Movimentacao-de-Pulso/backend/.venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
