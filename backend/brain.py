@@ -17,7 +17,7 @@ GESTOS = {
     6: ("Eu te amo (LIBRAS)",           ["amo", "love", "libras", "ite"]),
 }
 
-LLM_MODEL = "gpt-oss:latest"
+LLM_MODEL = "phi3"
 
 # Bloco de texto que descreve os gestos, reutilizado no prompt do LLM
 _GESTOS_PROMPT = "\n".join(
