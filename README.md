@@ -79,4 +79,7 @@ Como o aplicativo depende de gravação de áudio em tempo real, o uso de emulad
 4. Instale e rode o aplicativo:
    ```bash
    flutter run
-   ```
+   ``
+
+comando pra inicializar o app : flutter run
+comando pra inicializar o backend: uvicorn server:app --host 0.0.0.0 --port 5000 --reload
