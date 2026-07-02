@@ -12,15 +12,26 @@ Servo servoPulso;
 
 // Posições por gesto: { polegar, indicador, médio, anelar, mindinho, pulso }
 // 0 = fechado/recolhido, 180 = aberto/estendido
+// IDs devem corresponder ao dicionário GESTOS em backend/brain.py
 const int POSICOES_GESTOS[NUM_GESTOS][NUM_SERVOS] = {
   //  Pol   Ind   Med   Ane   Min   Pul
-  {    0,    0,    0,    0,    0,   90 },  // 0: Descanso (mão fechada)
-  {  180,  180,  180,  180,  180,   90 },  // 1: Mão aberta
-  {    0,  180,    0,    0,    0,   90 },  // 2: Apontar (só indicador)
-  {    0,  180,  180,    0,    0,   90 },  // 3: Paz / Vitória
-  {  180,  180,  180,  180,  180,   45 },  // 4: Tchau (mão aberta, pulso inclinado)
-  {  180,    0,    0,    0,    0,   90 },  // 5: Joinha (só polegar)
-  {  180,  180,    0,    0,  180,   90 },  // 6: Eu te amo (polegar + indicador + mindinho)
+  {    0,    0,    0,    0,    0,   90 },  //  0: Mão fechada / Zero
+  {    0,  180,    0,    0,    0,   90 },  //  1: Número Um
+  {    0,  180,  180,    0,    0,   90 },  //  2: Número Dois / Paz
+  {    0,  180,  180,  180,    0,   90 },  //  3: Número Três
+  {    0,  180,  180,  180,  180,   90 },  //  4: Número Quatro
+  {  180,  180,  180,  180,  180,   90 },  //  5: Número Cinco / Mão Aberta
+  {  180,  180,    0,    0,  180,   90 },  //  6: Eu te amo (LIBRAS)
+  {  180,    0,    0,    0,    0,   90 },  //  7: Joia / Positivo / Sim
+  {    0,    0,  180,    0,    0,   90 },  //  8: Dedo do meio / Raiva
+  {  180,    0,    0,    0,  180,   90 },  //  9: Surfista / Hang Loose
+  {    0,  180,    0,    0,  180,   90 },  // 10: Rock / Chifres
+  {  180,  180,  180,  180,  180,   45 },  // 11: Aceno / Tchau / Oi
+  {    0,    0,    0,    0,  180,   90 },  // 12: Letra I (LIBRAS) — só mindinho
+  {  180,  180,    0,    0,    0,   90 },  // 13: Letra L (LIBRAS) — polegar + indicador
+  {  180,    0,  180,  180,  180,   90 },  // 14: Sinal de OK (approx: 3 dedos + polegar, indicador fechado)
+  {    0,  180,    0,    0,    0,   45 },  // 15: Não / Negativo — indicador + pulso inclinado
+  {    0,  180,  180,  180,    0,   90 },  // 16: Água (LIBRAS) — índice + médio + anelar
 };
 
 void inicializarServos() {

@@ -54,8 +54,12 @@ class _ChatScreenState extends State<ChatScreen> {
   late stt.SpeechToText _speech;
   bool _isListening = false;
   bool _isProcessing = false;
+  bool _hasText = false;
   String _recognizedText = '';
-  
+
+  final TextEditingController _textController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
   final List<ChatMessage> _messages = [
     ChatMessage(text: 'Fale com a mão', isUser: false),
   ];
@@ -64,25 +68,48 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
+    _textController.addListener(() {
+      final hasText = _textController.text.trim().isNotEmpty;
+      if (hasText != _hasText) setState(() => _hasText = hasText);
+    });
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _processFinalText(String text) {
     if (text.isEmpty) return;
-    
-    // 1. Adiciona a mensagem do usuário e a resposta provisória do robô
+
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true));
       _messages.add(ChatMessage(
-        text: 'Analisando o áudio...', 
-        isUser: false, 
+        text: 'Analisando...',
+        isUser: false,
         status: 'analyzing',
       ));
-      _recognizedText = ''; // Limpa o buffer de reconhecimento
+      _recognizedText = '';
     });
-    
-    // 2. Chama a API passando o índice exato da mensagem do robô que deve ser atualizada
+
+    _scrollToBottom();
+
     final robotMessageIndex = _messages.length - 1;
     enviarComandoParaServidor(text, robotMessageIndex);
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   void _listen() async {
@@ -129,6 +156,67 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _sendTypedText() {
+    if (_isProcessing) return;
+    final text = _textController.text.trim();
+    if (text.isEmpty) return;
+    _textController.clear();
+    _isProcessing = true;
+    _processFinalText(text);
+  }
+
+  Widget _buildActionButton({
+    Key? key,
+    required VoidCallback? onTap,
+    required IconData icon,
+    required bool isListening,
+  }) {
+    final bool disabled = onTap == null;
+    return GestureDetector(
+      key: key,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          gradient: disabled
+              ? null
+              : LinearGradient(
+                  colors: isListening
+                      ? [Colors.redAccent, Colors.deepOrange]
+                      : [
+                          Theme.of(context).colorScheme.primary,
+                          const Color(0xFF8E24AA),
+                        ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+          color: disabled ? Colors.grey[300] : null,
+          shape: BoxShape.circle,
+          boxShadow: disabled
+              ? []
+              : [
+                  BoxShadow(
+                    color: (isListening
+                            ? Colors.redAccent
+                            : Theme.of(context).colorScheme.primary)
+                        .withOpacity(isListening ? 0.5 : 0.3),
+                    blurRadius: isListening ? 16 : 8,
+                    spreadRadius: isListening ? 2 : 0,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+        ),
+        child: Icon(
+          icon,
+          color: disabled ? Colors.grey[600] : Colors.white,
+          size: 22,
+        ),
+      ),
+    );
+  }
+
   // Endereço IP do servidor Python na rede local.
   static const String _serverUrl = 'http://192.168.18.201:5000/api/comando';
 
@@ -147,18 +235,22 @@ class _ChatScreenState extends State<ChatScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final sucesso = data['sucesso'] as bool;
-        final detalhes = data['detalhes'] as String;
+        final respostaTexto = (data['resposta_texto'] as String?)?.isNotEmpty == true
+            ? data['resposta_texto'] as String
+            : data['detalhes'] as String? ?? 'Comando processado.';
 
         setState(() {
           _messages[messageIndex].text = sucesso
-              ? detalhes
-              : 'Não reconheci. $detalhes';
+              ? respostaTexto
+              : 'Não reconheci o comando. Tente novamente.';
           _messages[messageIndex].status = sucesso ? 'acting' : 'none';
           _isProcessing = false;
         });
+        _scrollToBottom();
       } else {
         setState(() {
-          _messages[messageIndex].text = 'Erro no servidor (${response.statusCode}).';
+          _messages[messageIndex].text =
+              'Erro no servidor (${response.statusCode}). Tente novamente.';
           _messages[messageIndex].status = 'none';
           _isProcessing = false;
         });
@@ -166,7 +258,8 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages[messageIndex].text = 'Servidor inacessível. Verifique a conexão.';
+        _messages[messageIndex].text =
+            'Não foi possível conectar ao servidor. Verifique se o backend está rodando.';
         _messages[messageIndex].status = 'none';
         _isProcessing = false;
       });
@@ -252,6 +345,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
               itemCount: _messages.length + ((_isListening || _recognizedText.isNotEmpty) ? 1 : 0),
               itemBuilder: (context, index) {
@@ -280,43 +374,67 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 40.0, top: 20.0),
-            child: Center(
-              child: GestureDetector(
-                onTap: _listen,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: _isListening ? 110 : 100,
-                  height: _isListening ? 110 : 100,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: _isListening 
-                          ? [Colors.redAccent, Colors.deepOrange]
-                          : [
-                              Theme.of(context).colorScheme.primary,
-                              const Color(0xFF8E24AA),
-                            ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_isListening ? Colors.redAccent : Theme.of(context).colorScheme.primary)
-                            .withOpacity(0.5),
-                        blurRadius: _isListening ? 25 : 15,
-                        spreadRadius: _isListening ? 5 : 0,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    _isListening ? Icons.mic_off : Icons.mic, 
-                    color: Colors.white,
-                    size: 50,
-                  ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
                 ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 120),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F2F5),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: TextField(
+                        controller: _textController,
+                        enabled: !_isProcessing && !_isListening,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+                        textCapitalization: TextCapitalization.sentences,
+                        style: const TextStyle(fontSize: 15),
+                        decoration: const InputDecoration(
+                          hintText: 'Digite ou fale um comando...',
+                          hintStyle: TextStyle(color: Colors.black38, fontSize: 15),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          border: InputBorder.none,
+                        ),
+                        onSubmitted: (_) => _sendTypedText(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (child, animation) =>
+                        ScaleTransition(scale: animation, child: child),
+                    child: _hasText
+                        ? _buildActionButton(
+                            key: const ValueKey('send'),
+                            onTap: _sendTypedText,
+                            icon: Icons.send_rounded,
+                            isListening: false,
+                          )
+                        : _buildActionButton(
+                            key: const ValueKey('mic'),
+                            onTap: _isProcessing ? null : _listen,
+                            icon: _isListening ? Icons.mic_off : Icons.mic,
+                            isListening: _isListening,
+                          ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -375,12 +493,13 @@ class ChatBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(message ?? '', style: textStyle),
-            const SizedBox(height: 12),
-            const Center(
-              child: Icon(
-                Icons.back_hand, // Placeholder animado no futuro
-                size: 48, 
-                color: Color(0xFF6200EA),
+            const SizedBox(height: 8),
+            Text(
+              '(Observe a mão)',
+              style: TextStyle(
+                color: isMe ? Colors.white70 : Colors.black38,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
               ),
             ),
           ],

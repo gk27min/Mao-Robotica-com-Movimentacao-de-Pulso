@@ -1,20 +1,30 @@
-import re
+import json
 import logging
 import ollama
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("brain")
 
 # Gestos disponíveis: ID → (descrição curta, palavras-chave para fallback)
 GESTOS = {
-    0: ("Descanso / mão fechada",       ["descanso", "parar", "fechar", "repouso", "zero", "pausa"]),
-    1: ("Mão aberta",                   ["abrir", "aberta", "estender", "todos", "dedos"]),
-    2: ("Apontar / indicador",          ["apontar", "indicador", "ponto"]),
-    3: ("Paz / Vitória",                ["paz", "vitoria", "vitória", "peace", "victory"]),
-    4: ("Tchau / Cumprimento",          ["tchau", "ola", "olá", "acenar", "cumprimento"]),
-    5: ("Joinha / Positivo",            ["joinha", "positivo", "polegar", "like", "ok"]),
-    6: ("Eu te amo (LIBRAS)",           ["amo", "love", "libras", "ite"]),
+    0: ("Mão fechada / Zero",      ["zero", "0", "fechar", "punho", "nada", "vazio", "nulo"]),
+    1: ("Número Um",               ["um", "1", "primeiro", "unico", "apontar", "atenção", "foco", "destaque"]),
+    2: ("Número Dois / Paz",       ["dois", "2", "segundo", "duas", "paz", "vitoria", "peace", "duplo", "vencer"]),
+    3: ("Número Três",             ["tres", "três", "3", "terceiro", "triplo"]),
+    4: ("Número Quatro",           ["quatro", "4", "quarto", "quadruplo"]),
+    5: ("Número Cinco / Aberta",   ["cinco", "5", "quinto", "abrir", "aberta", "pare", "stop", "todos", "espalmado", "alto"]),
+    6: ("Eu te amo (LIBRAS)",      ["amo", "amor", "love", "apaixonado", "carinho", "te amo", "romance", "coracao"]),
+    7: ("Joia / Positivo / Sim",   ["joia", "positivo", "sim", "concordo", "legal", "bom", "certo", "like", "beleza", "aprovado", "correto", "exato"]),
+    8: ("Dedo do meio / Raiva",    ["xingamento", "ofensa", "raiva", "bravo", "irritado", "odio", "insulto", "ruim"]),
+    9: ("Surfista / Hang Loose",   ["surfista", "hang loose", "tranquilo", "suave", "shaka", "praia", "relaxa", "de boa", "calma"]),
+    10: ("Rock / Chifres",         ["rock", "metal", "heavy metal", "chifre", "festa", "irado", "show", "empolgado", "musica"]),
+    11: ("Aceno / Tchau / Oi",     ["tchau", "ola", "olá", "oi", "saudacao", "despedida", "adeus", "acenar", "bem-vindo", "chegada", "partida"]),
+    12: ("Letra I (LIBRAS)",       ["letra i", "i", "vogal i", "i em libras", "mim", "eu"]),
+    13: ("Letra L (LIBRAS)",       ["letra l", "l", "consoante l", "l em libras", "perdedor", "loser"]),
+    14: ("Sinal de OK",            ["ok", "perfeito", "excelente", "maravilha", "combinado", "tudo bem", "certissimo", "pronto"]),
+    15: ("Não / Negativo",         ["nao", "não", "negativo", "errado", "discordo", "recusa", "proibido", "rejeitado", "nunca", "jamais", "incorreto"]),
+    16: ("Água (LIBRAS)",          ["agua", "água", "beber", "sede", "liquido", "hidratação", "tomar", "copo"])
 }
 
 LLM_MODEL = "phi3"
@@ -25,24 +35,39 @@ _GESTOS_PROMPT = "\n".join(
 )
 
 _PROMPT_TEMPLATE = """\
-Você é um classificador de comandos para uma mão robótica. Sua única saída deve ser um único número inteiro.
+Você é o cérebro de inteligência artificial do LIBRAS-BOT, uma mão robótica física.
+Você DEVE responder APENAS com um objeto JSON válido.
 
-Gestos disponíveis:
+Sua resposta pode enviar uma lista de ações para a mão usando DOIS protocolos:
+1. Gestos Padrão (G): Use quando a intenção do usuário corresponder aos gestos cadastrados no banco de dados. Formato: "<G:ID>"
+2. Modo Marionete (R): Use APENAS para movimentos anatômicos específicos não cadastrados solicitados pelo usuário. Formato: "<R:ang1,ang2,ang3,ang4,ang5,ang_pulso>". 
+
+LÓGICA MECÂNICA DOS MOTORES (Regra estrita para o Modo R):
+A ordem do array é: [mindinho, anelar, meio, indicador, polegar, pulso].
+Os dedos possuem mecânicas invertidas:
+- Mindinho, Anelar e Meio: Contraído/Fechado = 180 | Esticado/Aberto = 0.
+- Indicador e Polegar: Contraído/Fechado = 0 | Esticado/Aberto = 180.
+- Pulso: Varia de 0 a 180 (o centro/repouso é 120).
+
+Gestos disponíveis no banco de dados:
 {gestos}
 
-Regras de classificação:
-1. Se a entrada for uma expressão matemática, resolva-a PRIMEIRO.
-   - Se o resultado for um ID válido (0-6), retorne esse ID diretamente.
-   - Se o resultado estiver fora do intervalo, retorne o ID cujo gesto seja semanticamente mais próximo do número.
-   - Exemplos: "quanto é 3 - 3?" → 3-3=0 → retorne 0
-               "quanto é 2 + 1?" → 2+1=3 → retorne 3
-               "metade de 10"    → 5 → retorne 5
-2. Se a entrada for um comando de voz ou descrição, identifique o gesto correspondente e retorne seu ID.
-3. Se não for possível determinar com confiança, retorne -1.
+REGRAS DE COMPOSIÇÃO NUMÉRICA E MATEMÁTICA:
+- Você NUNCA deve inventar gestos para números usando o Modo R. Use apenas os numerais do banco de dados (1 a 5) e o 0 (mão fechada/descanso).
+- Para dígitos de 6 a 9, use uma representação aditiva em base 5. Mostre o 5, faça a Mão Fechada (0) como transição, e depois mostre o resto.
+  * Exemplo para 7: ["<G:5>", "<G:0>", "<G:2>"]
+  * Exemplo para 9: ["<G:5>", "<G:0>", "<G:4>"]
+- Se a resposta for um número composto pequeno (ex: 10 ou 12), some os valores.
+  * Exemplo para 10: ["<G:5>", "<G:0>", "<G:5>"]
+  * Exemplo para 12: ["<G:5>", "<G:0>", "<G:5>", "<G:0>", "<G:2>"]
 
 Entrada do usuário: "{texto}"
 
-Responda APENAS com um único número inteiro (0 a 6, ou -1). Sem explicações, sem texto adicional.\
+Responda APENAS com este JSON puro (sem markdown ```json):
+{{
+  "resposta_texto": "Sua resposta natural em texto para o app",
+  "sequencia_gestos": ["comando1", "comando2"]
+}}
 """
 
 
@@ -51,20 +76,42 @@ class MapeadorDeSinais:
         self.llm_model = llm_model
         logger.info(f"MapeadorDeSinais iniciado com modelo '{self.llm_model}'.")
 
-    async def _classificar_com_llm(self, texto: str) -> Optional[int]:
-        """Pede ao LLM um ID de gesto (0–6). Retorna None em caso de falha ou -1."""
+    @staticmethod
+    def _cmd_valido(cmd: object) -> bool:
+        """Valida se um item da sequencia_gestos tem o formato correto."""
+        if not isinstance(cmd, str):
+            return False
+        if cmd.startswith('<G:') and cmd.endswith('>'):
+            try:
+                gid = int(cmd[3:-1])
+                return 0 <= gid < len(GESTOS)
+            except ValueError:
+                return False
+        if cmd.startswith('<R:') and cmd.endswith('>'):
+            partes = cmd[3:-1].split(',')
+            return len(partes) == 6 and all(p.strip().lstrip('-').isdigit() for p in partes)
+        return False
+
+    async def _classificar_com_llm(self, texto: str) -> Optional[Dict]:
+        """Pede ao LLM uma sequência de comandos formatados. Retorna None em caso de falha."""
         prompt = _PROMPT_TEMPLATE.format(gestos=_GESTOS_PROMPT, texto=texto)
+        raw = ""
         try:
             client = ollama.AsyncClient()
-            response = await client.generate(model=self.llm_model, prompt=prompt)
+            response = await client.generate(model=self.llm_model, prompt=prompt, format='json')
             raw = response["response"].strip()
             logger.info(f"LLM bruto: '{raw}'")
 
-            match = re.search(r"-?\d+", raw)
-            if match:
-                gid = int(match.group())
-                if 0 <= gid <= 6:
-                    return gid
+            data = json.loads(raw)
+            sequencia = data.get("sequencia_gestos", [])
+            resposta_texto = data.get("resposta_texto", "")
+
+            cmds_validos = [cmd for cmd in sequencia if self._cmd_valido(cmd)]
+            if cmds_validos:
+                return {"resposta_texto": resposta_texto, "sequencia_gestos": cmds_validos}
+
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.error(f"Erro ao parsear JSON do LLM: {e}. Resposta bruta: '{raw}'")
         except Exception as e:
             logger.error(f"Erro ao chamar LLM: {e}")
         return None
@@ -78,9 +125,9 @@ class MapeadorDeSinais:
                 return gid
         return None
 
-    async def processar_comando(self, texto_usuario: str) -> Tuple[Optional[int], Optional[str], float]:
+    async def processar_comando(self, texto_usuario: str) -> Tuple[Optional[List[str]], Optional[str], float]:
         """
-        Retorna (id_gesto, descricao, confianca).
+        Retorna (sequencia_gestos, resposta_texto, confianca).
         confianca = 1.0 (LLM), 0.75 (keyword), 0.0 (falha).
         """
         if not texto_usuario or not texto_usuario.strip():
@@ -89,18 +136,19 @@ class MapeadorDeSinais:
         texto = texto_usuario.strip()
 
         # Estágio 1: LLM
-        gid = await self._classificar_com_llm(texto)
-        if gid is not None:
-            desc = GESTOS[gid][0]
-            logger.info(f"LLM → gesto {gid}: '{desc}'")
-            return gid, desc, 1.0
+        resultado = await self._classificar_com_llm(texto)
+        if resultado is not None:
+            sequencia = resultado["sequencia_gestos"]
+            resposta_texto = resultado["resposta_texto"]
+            logger.info(f"LLM → sequência {sequencia}: '{resposta_texto}'")
+            return sequencia, resposta_texto, 1.0
 
         # Estágio 2: fallback por palavras-chave
-        logger.warning("LLM falhou ou retornou -1. Tentando fallback por keywords.")
+        logger.warning("LLM falhou. Tentando fallback por keywords.")
         gid = self._classificar_por_keywords(texto)
         if gid is not None:
             desc = GESTOS[gid][0]
-            return gid, desc, 0.75
+            return [f"<G:{gid}>"], desc, 0.75
 
         logger.warning(f"Nenhum gesto reconhecido para: '{texto}'")
         return None, None, 0.0

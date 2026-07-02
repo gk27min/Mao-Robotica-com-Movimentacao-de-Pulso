@@ -1,6 +1,7 @@
+import asyncio
 import logging
 import uvicorn
-from typing import Optional
+from typing import Optional, List
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -42,7 +43,7 @@ class ComandoResponse(BaseModel):
     sucesso: bool
     texto_original: str
     comando_detectado: Optional[str] = None
-    codigo: Optional[int] = None
+    codigos: Optional[List[str]] = None
     confianca: float
     detalhes: str
 
@@ -57,48 +58,58 @@ def read_root():
 async def processar_comando(requisicao: ComandoRequest):
     texto = requisicao.texto
     logger.info(f"Requisição recebida com texto de voz: '{texto}'")
-    
-    # 1. Camada de Processamento: Similaridade de Cosseno com Numpy + Ollama
-    codigo, descricao, similaridade = await mapeador.processar_comando(texto)
-    
-    if codigo is None:
-        detalhes = f"Comando descartado (Similaridade de cosseno: {similaridade:.4f} abaixo do limiar)."
+
+    # 1. Camada de Processamento: LLM + fallback por keywords
+    sequencia, resposta_texto, confianca = await mapeador.processar_comando(texto)
+
+    if not sequencia:
+        detalhes = resposta_texto or f"Nenhum gesto reconhecido para: '{texto}'"
         logger.warning(detalhes)
         return ComandoResponse(
             sucesso=False,
             texto_original=texto,
             comando_detectado=None,
-            codigo=None,
-            confianca=similaridade,
+            codigos=None,
+            confianca=confianca,
             detalhes=detalhes
         )
-    
-    logger.info(f"Comando compreendido e mapeado: {descricao} (Código: {codigo})")
 
-    # 2. Camada de Comunicação: Bluetooth LE
-    envio_sucesso = await enviar_comando_bluetooth(codigo)
-    
-    if not envio_sucesso:
-        detalhes = f"Comando '{descricao}' mapeado, mas falhou ao enviar por Bluetooth para a mão robótica."
+    logger.info(f"Sequência de gestos a executar: {sequencia}")
+
+    # 2. Camada de Comunicação: envia cada comando da sequência via Bluetooth LE
+    gestos_enviados = []
+    for i, comando in enumerate(sequencia):
+        envio_sucesso = await enviar_comando_bluetooth(comando)
+        if envio_sucesso:
+            gestos_enviados.append(comando)
+            logger.info(f"Comando {comando!r} enviado ({i + 1}/{len(sequencia)})")
+        else:
+            logger.error(f"Falha ao enviar {comando!r} ({i + 1}/{len(sequencia)})")
+        # Aguarda entre comandos para os servos concluírem o movimento
+        if i < len(sequencia) - 1:
+            await asyncio.sleep(2.0)
+
+    if not gestos_enviados:
+        detalhes = f"Sequência mapeada, mas falhou ao enviar por Bluetooth."
         logger.error(detalhes)
         return ComandoResponse(
             sucesso=False,
             texto_original=texto,
-            comando_detectado=descricao,
-            codigo=codigo,
-            confianca=similaridade,
+            comando_detectado=str(sequencia),
+            codigos=sequencia,
+            confianca=confianca,
             detalhes=detalhes
         )
 
     # 3. Retorno com Sucesso
-    detalhes = f"Comando '{descricao}' mapeado e enviado com sucesso para a mão robótica via Bluetooth."
+    detalhes = resposta_texto or f"{len(gestos_enviados)} comando(s) executado(s) com sucesso."
     logger.info(detalhes)
     return ComandoResponse(
         sucesso=True,
         texto_original=texto,
-        comando_detectado=descricao,
-        codigo=codigo,
-        confianca=similaridade,
+        comando_detectado=str(gestos_enviados),
+        codigos=gestos_enviados,
+        confianca=confianca,
         detalhes=detalhes
     )
 
