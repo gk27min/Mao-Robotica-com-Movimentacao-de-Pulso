@@ -10,30 +10,6 @@ Servo servoAnelar;
 Servo servoMindinho;
 Servo servoPulso;
 
-// Posições por gesto: { polegar, indicador, médio, anelar, mindinho, pulso }
-// 0 = fechado/recolhido, 180 = aberto/estendido
-// IDs devem corresponder ao dicionário GESTOS em backend/brain.py
-const int POSICOES_GESTOS[NUM_GESTOS][NUM_SERVOS] = {
-  //  Pol   Ind   Med   Ane   Min   Pul
-  {    0,    0,    0,    0,    0,   90 },  //  0: Mão fechada / Zero
-  {    0,  180,    0,    0,    0,   90 },  //  1: Número Um
-  {    0,  180,  180,    0,    0,   90 },  //  2: Número Dois / Paz
-  {    0,  180,  180,  180,    0,   90 },  //  3: Número Três
-  {    0,  180,  180,  180,  180,   90 },  //  4: Número Quatro
-  {  180,  180,  180,  180,  180,   90 },  //  5: Número Cinco / Mão Aberta
-  {  180,  180,    0,    0,  180,   90 },  //  6: Eu te amo (LIBRAS)
-  {  180,    0,    0,    0,    0,   90 },  //  7: Joia / Positivo / Sim
-  {    0,    0,  180,    0,    0,   90 },  //  8: Dedo do meio / Raiva
-  {  180,    0,    0,    0,  180,   90 },  //  9: Surfista / Hang Loose
-  {    0,  180,    0,    0,  180,   90 },  // 10: Rock / Chifres
-  {  180,  180,  180,  180,  180,   45 },  // 11: Aceno / Tchau / Oi
-  {    0,    0,    0,    0,  180,   90 },  // 12: Letra I (LIBRAS) — só mindinho
-  {  180,  180,    0,    0,    0,   90 },  // 13: Letra L (LIBRAS) — polegar + indicador
-  {  180,    0,  180,  180,  180,   90 },  // 14: Sinal de OK (approx: 3 dedos + polegar, indicador fechado)
-  {    0,  180,    0,    0,    0,   45 },  // 15: Não / Negativo — indicador + pulso inclinado
-  {    0,  180,  180,  180,    0,   90 },  // 16: Água (LIBRAS) — índice + médio + anelar
-};
-
 void inicializarServos() {
   servoPolegar.attach(PINO_POLEGAR);
   servoIndicador.attach(PINO_INDICADOR);
@@ -43,13 +19,225 @@ void inicializarServos() {
   servoPulso.attach(PINO_PULSO);
 }
 
-void executarGesto(int id) {
-  if (id < 0 || id >= NUM_GESTOS) return;
+// Ângulos calibrados na mão física (mesmos valores validados no sketch de
+// teste via Serial). A direção aberto/fechado não é a mesma para todos os
+// dedos — depende de como o fio foi montado em cada servo.
 
-  servoPolegar.write(POSICOES_GESTOS[id][0]);
-  servoIndicador.write(POSICOES_GESTOS[id][1]);
-  servoMedio.write(POSICOES_GESTOS[id][2]);
-  servoAnelar.write(POSICOES_GESTOS[id][3]);
-  servoMindinho.write(POSICOES_GESTOS[id][4]);
-  servoPulso.write(POSICOES_GESTOS[id][5]);
+void abrirMao() {
+  servoMindinho.write(0);
+  servoAnelar.write(0);
+  servoMedio.write(0);
+  servoIndicador.write(180);
+  servoPolegar.write(180);
+  servoPulso.write(140);
+}
+
+void cinco() {
+  abrirMao();
+}
+
+void fecharMao() {
+  servoMindinho.write(180);
+  servoAnelar.write(180);
+  servoMedio.write(180);
+  servoIndicador.write(0);
+  servoPolegar.write(0);
+  delay(5000);
+  abrirMao();
+}
+
+void um() {
+  servoMindinho.write(180);
+  servoAnelar.write(180);
+  servoMedio.write(180);
+  servoIndicador.write(180);
+  servoPolegar.write(0);
+  delay(1000);
+  abrirMao();
+}
+
+void dois() {
+  servoMindinho.write(180);
+  servoAnelar.write(180);
+  servoMedio.write(0);
+  servoIndicador.write(180);
+  servoPolegar.write(0);
+  delay(1000);
+  abrirMao();
+}
+
+void tres() {
+  servoMindinho.write(180);
+  servoAnelar.write(0);
+  servoMedio.write(0);
+  servoIndicador.write(180);
+  servoPolegar.write(0);
+  delay(1000);
+  abrirMao();
+}
+
+void quatro() {
+  servoMindinho.write(0);
+  servoAnelar.write(0);
+  servoMedio.write(0);
+  servoIndicador.write(180);
+  servoPolegar.write(0);
+  delay(1000);
+  abrirMao();
+}
+
+void eu_te_amo() {
+  servoMindinho.write(0);
+  servoAnelar.write(180);
+  servoMedio.write(180);
+  servoIndicador.write(180);
+  servoPolegar.write(180);
+  delay(1000);
+  abrirMao();
+}
+
+void joia() {
+  servoMindinho.write(180);
+  servoAnelar.write(180);
+  servoMedio.write(180);
+  servoIndicador.write(0);
+  servoPolegar.write(180);
+  delay(1000);
+  abrirMao();
+}
+
+void dedo_meio() {
+  servoMindinho.write(180);
+  servoAnelar.write(180);
+  servoMedio.write(0);
+  servoIndicador.write(0);
+  servoPolegar.write(0);
+  delay(1000);
+  abrirMao();
+}
+
+void surfista() {
+  servoMindinho.write(0);
+  servoAnelar.write(180);
+  servoMedio.write(180);
+  servoIndicador.write(0);
+  servoPolegar.write(180);
+  delay(300);
+  for (int i = 0; i < 3; i++) {
+    servoPulso.write(30);
+    delay(400);
+    servoPulso.write(180);
+    delay(400);
+  }
+  delay(1000);
+  abrirMao();
+}
+
+void rock() {
+  servoMindinho.write(0);
+  servoAnelar.write(180);
+  servoMedio.write(180);
+  servoIndicador.write(180);
+  servoPolegar.write(0);
+  delay(1000);
+  abrirMao();
+}
+
+void aceno() {
+  abrirMao();
+  delay(300);
+  for (int i = 0; i < 4; i++) {
+    servoPulso.write(30);
+    delay(400);
+    servoPulso.write(180);
+    delay(400);
+  }
+  delay(1000);
+  abrirMao();
+}
+
+void libras_I() {
+  servoMindinho.write(0);
+  servoAnelar.write(180);
+  servoMedio.write(180);
+  servoIndicador.write(0);
+  servoPolegar.write(0);
+  delay(1000);
+  abrirMao();
+}
+
+void libras_L() {
+  servoMindinho.write(180);
+  servoAnelar.write(180);
+  servoMedio.write(180);
+  servoIndicador.write(180);
+  servoPolegar.write(180);
+  delay(1000);
+  abrirMao();
+}
+
+void ok() {
+  servoMindinho.write(0);
+  servoAnelar.write(0);
+  servoMedio.write(0);
+  servoIndicador.write(0);
+  servoPolegar.write(0);
+  delay(1000);
+  abrirMao();
+}
+
+void nao() {
+  servoMindinho.write(180);
+  servoAnelar.write(180);
+  servoMedio.write(180);
+  servoIndicador.write(180);
+  servoPolegar.write(0);
+  delay(300);
+  for (int i = 0; i < 3; i++) {
+    servoPulso.write(30);
+    delay(400);
+    servoPulso.write(180);
+    delay(400);
+  }
+  delay(1000);
+  abrirMao();
+}
+
+void libras_agua() {
+  servoMindinho.write(180);
+  servoAnelar.write(180);
+  servoMedio.write(180);
+  servoPolegar.write(180);
+  delay(300);
+  for (int i = 0; i < 4; i++) {
+    servoIndicador.write(0);
+    delay(700);
+    servoIndicador.write(180);
+    delay(700);
+  }
+  delay(1000);
+  abrirMao();
+}
+
+void executarGesto(int id) {
+  switch (id) {
+    case 0:  fecharMao();   break;
+    case 1:  um();          break;
+    case 2:  dois();        break;
+    case 3:  tres();        break;
+    case 4:  quatro();      break;
+    case 5:  cinco();       break;
+    case 6:  eu_te_amo();   break;
+    case 7:  joia();        break;
+    case 8:  dedo_meio();   break;
+    case 9:  surfista();    break;
+    case 10: rock();        break;
+    case 11: aceno();       break;
+    case 12: libras_I();    break;
+    case 13: libras_L();    break;
+    case 14: ok();          break;
+    case 15: nao();         break;
+    case 16: libras_agua(); break;
+    default: break;
+  }
 }

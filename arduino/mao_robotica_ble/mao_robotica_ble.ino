@@ -72,13 +72,17 @@ void processarComando(char* cmd) {
 
 void setup() {
   Serial.begin(9600);
-
-  inicializarServos();
-  executarGesto(0);
+  while (!Serial && millis() < 3000);
 
   if (!BLE.begin()) {
-    Serial.println("Falha ao iniciar o Bluetooth!");
-    while (1);
+    Serial.println("Falha ao iniciar o Bluetooth! No UNO R4 WiFi isso geralmente indica que o "
+                    "firmware do modulo NORA-W36 e/ou a biblioteca ArduinoBLE estao desatualizados "
+                    "(Arduino IDE: Tools > Firmware & Certificates Updater).");
+    pinMode(LED_BUILTIN, OUTPUT);
+    while (1) {
+      digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+      delay(200);
+    }
   }
 
   BLE.setLocalName(NOME_BLE);
@@ -87,7 +91,12 @@ void setup() {
   BLE.addService(maoService);
   BLE.advertise();
 
-  Serial.println("BLE ativo. Aguardando conexao...");
+  inicializarServos();
+  abrirMao();
+
+  Serial.print("BLE ativo. Endereco: ");
+  Serial.println(BLE.address());
+  Serial.println("Aguardando conexao...");
 }
 
 void loop() {
