@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -24,8 +25,50 @@ class FalaComaMaoApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const ChatScreen(),
+      home: const MainNavigationScreen(),
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+// =====================================================================
+// NAVEGAÇÃO PRINCIPAL (Conversa / Biblioteca)
+// =====================================================================
+class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
+
+  @override
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+}
+
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
+  int _selectedIndex = 0;
+
+  static const List<Widget> _screens = [
+    ChatScreen(),
+    SignsLibraryScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _selectedIndex, children: _screens),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline_rounded),
+            selectedIcon: Icon(Icons.chat_bubble_rounded),
+            label: 'Conversa',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book_rounded),
+            label: 'Biblioteca',
+          ),
+        ],
+      ),
     );
   }
 }
@@ -34,7 +77,7 @@ class FalaComaMaoApp extends StatelessWidget {
 class ChatMessage {
   String text;
   final bool isUser;
-  String status; // 'none', 'analyzing', 'acting'
+  String status; // 'none', 'analyzing', 'done', 'error'
 
   ChatMessage({
     required this.text,
@@ -55,34 +98,75 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isListening = false;
   bool _isProcessing = false;
   String _recognizedText = '';
-  
+
+  final TextEditingController _textController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
   final List<ChatMessage> _messages = [
-    ChatMessage(text: 'Fale com a mão', isUser: false),
+    ChatMessage(text: 'Fale ou digite para conversar com a mão', isUser: false),
   ];
 
   @override
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
+    _textController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _processFinalText(String text) {
     if (text.isEmpty) return;
-    
+
     // 1. Adiciona a mensagem do usuário e a resposta provisória do robô
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true));
       _messages.add(ChatMessage(
-        text: 'Analisando o áudio...', 
-        isUser: false, 
+        text: 'Analisando...',
+        isUser: false,
         status: 'analyzing',
       ));
       _recognizedText = ''; // Limpa o buffer de reconhecimento
     });
-    
+    _scrollToBottom();
+
     // 2. Chama a API passando o índice exato da mensagem do robô que deve ser atualizada
     final robotMessageIndex = _messages.length - 1;
     enviarComandoParaServidor(text, robotMessageIndex);
+  }
+
+  void _sendTextMessage() {
+    if (_isProcessing) return;
+    final text = _textController.text.trim();
+    if (text.isEmpty) return;
+    _textController.clear();
+    _isProcessing = true;
+    _processFinalText(text);
+  }
+
+  void _cancelListening() {
+    HapticFeedback.lightImpact();
+    _speech.cancel();
+    setState(() {
+      _isListening = false;
+      _recognizedText = '';
+    });
   }
 
   void _listen() async {
@@ -102,8 +186,9 @@ class _ChatScreenState extends State<ChatScreen> {
           setState(() => _isListening = false);
         },
       );
-      
+
       if (available) {
+        HapticFeedback.lightImpact();
         setState(() {
           _isListening = true;
           _recognizedText = '';
@@ -123,6 +208,7 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     } else {
+      HapticFeedback.mediumImpact();
       setState(() => _isListening = false);
       _speech.stop();
       // Removido disparo manual. A responsabilidade agora é apenas do finalResult.
@@ -148,29 +234,58 @@ class _ChatScreenState extends State<ChatScreen> {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final sucesso = data['sucesso'] as bool;
         final detalhes = data['detalhes'] as String;
+        final gestureName = data['comando_detectado'] as String?;
 
         setState(() {
-          _messages[messageIndex].text = sucesso
-              ? detalhes
-              : 'Não reconheci. $detalhes';
-          _messages[messageIndex].status = sucesso ? 'acting' : 'none';
           _isProcessing = false;
+          if (sucesso && gestureName != null) {
+            // Mostra primeiro que a mão está atuando; o texto final substitui em seguida.
+            _messages[messageIndex].text = 'Mão executando o gesto: ${gestureName.toUpperCase()}...';
+            _messages[messageIndex].status = 'acting';
+          } else {
+            _messages[messageIndex].text = sucesso ? detalhes : 'Não reconheci. $detalhes';
+            _messages[messageIndex].status = sucesso ? 'done' : 'error';
+          }
         });
+        _scrollToBottom();
+
+        if (sucesso && gestureName != null) {
+          _finishHandActing(messageIndex, detalhes);
+        } else if (!sucesso) {
+          HapticFeedback.vibrate();
+        }
       } else {
         setState(() {
           _messages[messageIndex].text = 'Erro no servidor (${response.statusCode}).';
-          _messages[messageIndex].status = 'none';
+          _messages[messageIndex].status = 'error';
           _isProcessing = false;
         });
+        HapticFeedback.vibrate();
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _messages[messageIndex].text = 'Servidor inacessível. Verifique a conexão.';
-        _messages[messageIndex].status = 'none';
+        _messages[messageIndex].status = 'error';
         _isProcessing = false;
       });
+      HapticFeedback.vibrate();
     }
+  }
+
+  void _finishHandActing(int messageIndex, String detalhes) {
+    HapticFeedback.mediumImpact();
+    // O servidor confirma apenas o envio do comando via Bluetooth, não o término do
+    // movimento físico — sem telemetria do Arduino, a duração aqui é uma estimativa de UX.
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      if (_messages[messageIndex].status != 'acting') return;
+      setState(() {
+        _messages[messageIndex].text = detalhes;
+        _messages[messageIndex].status = 'done';
+      });
+      _scrollToBottom();
+    });
   }
 
   @override
@@ -212,34 +327,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.black87),
-            onSelected: (String value) {
-              if (value == 'biblioteca') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SignsLibraryScreen()),
-                );
-              } else if (value == 'cadastrar') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const RegisterSignScreen()),
-                );
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'biblioteca',
-                child: Text('Ver Sinais Registrados'),
-              ),
-              const PopupMenuItem<String>(
-                value: 'cadastrar',
-                child: Text('Cadastrar Novo Sinal'),
-              ),
-            ],
-          ),
-        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
           child: Container(
@@ -252,6 +339,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
               itemCount: _messages.length + ((_isListening || _recognizedText.isNotEmpty) ? 1 : 0),
               itemBuilder: (context, index) {
@@ -280,44 +368,143 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 40.0, top: 20.0),
-            child: Center(
-              child: GestureDetector(
-                onTap: _listen,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: _isListening ? 110 : 100,
-                  height: _isListening ? 110 : 100,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: _isListening 
-                          ? [Colors.redAccent, Colors.deepOrange]
-                          : [
-                              Theme.of(context).colorScheme.primary,
-                              const Color(0xFF8E24AA),
-                            ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_isListening ? Colors.redAccent : Theme.of(context).colorScheme.primary)
-                            .withOpacity(0.5),
-                        blurRadius: _isListening ? 25 : 15,
-                        spreadRadius: _isListening ? 5 : 0,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    _isListening ? Icons.mic_off : Icons.mic, 
-                    color: Colors.white,
-                    size: 50,
-                  ),
-                ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: _isListening ? _buildRecordingBar() : _buildComposerBar(),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComposerBar() {
+    final hasText = _textController.text.trim().isNotEmpty;
+    return Row(
+      key: const ValueKey('composer'),
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48, maxHeight: 120),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _textController,
+              minLines: 1,
+              maxLines: 4,
+              enabled: !_isProcessing,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                hintText: 'Digite uma mensagem',
+                border: InputBorder.none,
+                isCollapsed: true,
+              ),
+              onSubmitted: (_) => _sendTextMessage(),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: _isProcessing ? null : (hasText ? _sendTextMessage : _listen),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: _isProcessing
+                    ? [Colors.grey.shade400, Colors.grey.shade500]
+                    : [Theme.of(context).colorScheme.primary, const Color(0xFF8E24AA)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.35),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(
+              hasText ? Icons.send_rounded : Icons.mic_rounded,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecordingBar() {
+    return Container(
+      key: const ValueKey('recording'),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, color: Colors.black45),
+            onPressed: _cancelListening,
+            tooltip: 'Cancelar',
+          ),
+          Expanded(
+            child: _recognizedText.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: WaveformIndicator(),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      _recognizedText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.black87),
+                    ),
+                  ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: Text('Ouvindo...', style: TextStyle(color: Colors.black45, fontSize: 12)),
+          ),
+          GestureDetector(
+            onTap: _listen,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(colors: [Colors.redAccent, Colors.deepOrange]),
+              ),
+              child: const Icon(Icons.stop_rounded, color: Colors.white),
             ),
           ),
         ],
@@ -348,7 +535,7 @@ class ChatBubble extends StatelessWidget {
       height: 1.3,
     );
 
-    // Constrói o conteúdo do balão com base no status do robô
+    // Constrói o conteúdo do balão com base no status da resposta do robô
     Widget content;
     if (child != null) {
       content = child!;
@@ -361,7 +548,7 @@ class ChatBubble extends StatelessWidget {
               width: 16,
               height: 16,
               child: CircularProgressIndicator(
-                strokeWidth: 2, 
+                strokeWidth: 2,
                 color: Color(0xFF8E24AA), // Cor vibrante igual ao tema principal
               ),
             ),
@@ -370,19 +557,32 @@ class ChatBubble extends StatelessWidget {
           ],
         );
       } else if (status == 'acting') {
-        content = Column(
+        content = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.back_hand, size: 18, color: Color(0xFF8E24AA)),
+            const SizedBox(width: 10),
+            Flexible(child: Text(message ?? '', style: textStyle)),
+          ],
+        );
+      } else if (status == 'done') {
+        content = Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Flexible(child: Text(message ?? '', style: textStyle)),
+            const SizedBox(width: 6),
+            const Icon(Icons.check_circle_rounded, size: 16, color: Colors.green),
+          ],
+        );
+      } else if (status == 'error') {
+        content = Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(message ?? '', style: textStyle),
-            const SizedBox(height: 12),
-            const Center(
-              child: Icon(
-                Icons.back_hand, // Placeholder animado no futuro
-                size: 48, 
-                color: Color(0xFF6200EA),
-              ),
-            ),
+            const Icon(Icons.error_outline_rounded, size: 18, color: Colors.redAccent),
+            const SizedBox(width: 8),
+            Flexible(child: Text(message ?? '', style: textStyle)),
           ],
         );
       } else {
@@ -400,7 +600,7 @@ class ChatBubble extends StatelessWidget {
           minHeight: 48,
         ),
         decoration: BoxDecoration(
-          gradient: isMe 
+          gradient: isMe
               ? LinearGradient(
                   colors: [
                     Theme.of(context).colorScheme.primary,
@@ -410,16 +610,17 @@ class ChatBubble extends StatelessWidget {
                   end: Alignment.bottomRight,
                 )
               : null,
-          color: isMe ? null : Colors.white,
+          color: isMe ? null : (status == 'error' ? const Color(0xFFFFF3F3) : Colors.white),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(24),
             topRight: const Radius.circular(24),
             bottomLeft: Radius.circular(isMe ? 24 : 4),
             bottomRight: Radius.circular(isMe ? 4 : 24),
           ),
+          border: status == 'error' ? Border.all(color: Colors.redAccent.withOpacity(0.3)) : null,
           boxShadow: [
             BoxShadow(
-              color: isMe 
+              color: isMe
                   ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
                   : Colors.black.withOpacity(0.05),
               blurRadius: 8,
@@ -471,11 +672,11 @@ class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProv
               final delay = index * 0.2;
               var val = (_controller.value - delay) % 1.0;
               if (val < 0) val += 1.0;
-              
-              final offset = (val < 0.5) 
-                  ? Curves.easeInOut.transform(val * 2) 
+
+              final offset = (val < 0.5)
+                  ? Curves.easeInOut.transform(val * 2)
                   : Curves.easeInOut.transform((1 - val) * 2);
-                  
+
               return Transform.translate(
                 offset: Offset(0, -6 * offset),
                 child: child,
@@ -497,6 +698,61 @@ class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProv
   }
 }
 
+// Indicador de forma de onda animado, usado na barra de gravação de áudio.
+class WaveformIndicator extends StatefulWidget {
+  const WaveformIndicator({super.key});
+
+  @override
+  State<WaveformIndicator> createState() => _WaveformIndicatorState();
+}
+
+class _WaveformIndicatorState extends State<WaveformIndicator> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 24,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(5, (i) {
+          return AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final t = (_controller.value + i * 0.18) % 1.0;
+              final height = 6 + 14 * (0.5 + 0.5 * math.sin(t * 2 * math.pi));
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                width: 4,
+                height: height,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8E24AA),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              );
+            },
+          );
+        }),
+      ),
+    );
+  }
+}
+
 class SignsLibraryScreen extends StatelessWidget {
   const SignsLibraryScreen({super.key});
 
@@ -507,6 +763,16 @@ class SignsLibraryScreen extends StatelessWidget {
         title: const Text('Sinais Registrados'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const RegisterSignScreen()),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Cadastrar Sinal'),
       ),
       body: const Center(
         child: Text('Biblioteca de gestos', style: TextStyle(fontSize: 18)),
