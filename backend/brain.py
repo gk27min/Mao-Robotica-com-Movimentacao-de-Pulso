@@ -6,15 +6,19 @@ from typing import Optional, Tuple
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("brain")
 
-# Gestos disponíveis: ID → (descrição curta, palavras-chave para fallback)
+# Gestos disponíveis: ID → (Descrição semântica e física, palavras-chave para fallback)
 GESTOS = {
-    0: ("Descanso / mão fechada",       ["descanso", "parar", "fechar", "repouso", "zero", "pausa"]),
-    1: ("Mão aberta",                   ["abrir", "aberta", "estender", "todos", "dedos"]),
-    2: ("Apontar / indicador",          ["apontar", "indicador", "ponto"]),
-    3: ("Paz / Vitória",                ["paz", "vitoria", "vitória", "peace", "victory"]),
-    4: ("Tchau / Cumprimento",          ["tchau", "ola", "olá", "acenar", "cumprimento"]),
-    5: ("Joinha / Positivo",            ["joinha", "positivo", "polegar", "like", "ok"]),
-    6: ("Eu te amo (LIBRAS)",           ["amo", "love", "libras", "ite"]),
+    0: ("Mão totalmente fechada / Descanso", ["descanso", "parar", "fechar", "repouso", "zero", "pausa", "0", "punho", "nenhum"]),
+    1: ("Apontar (Apenas indicador aberto)", ["apontar", "indicador", "ponto", "um", "1", "direção"]),
+    2: ("Paz e Vitória (Indicador e médio abertos)", ["paz", "vitoria", "vitória", "peace", "victory", "dois", "2", "v"]),
+    3: ("Três (Indicador, médio e anelar abertos)", ["tres", "três", "3"]),
+    4: ("Quatro (Indicador, médio, anelar e mindinho abertos, polegar fechado)", ["quatro", "4", "B em libras"]),
+    5: ("Mão totalmente aberta (Todos os cinco dedos estendidos)", ["abrir", "aberta", "estender", "todos", "dedos", "cinco", "5", "espalmar", "pare"]),
+    6: ("Sinal Eu te amo em LIBRAS (Polegar, indicador e mindinho abertos)", ["amo", "love", "libras", "te amo", "ily"]),
+    7: ("Joinha / Positivo (Apenas polegar aberto)", ["joinha", "positivo", "ok", "bom", "legal", "like", "curtir", "polegar", "cima"]),
+    8: ("Dedo do meio (Apenas dedo médio aberto)", ["meio", "dedo do meio", "ofensivo", "médio", "chingamento"]),
+    9: ("Hang Loose / Shaka (Polegar e mindinho abertos)", ["hanglose", "hang loose", "shaka", "surf", "telefone", "alô", "🤙"]),
+    10: ("Rock and Roll (Indicador e mindinho abertos)", ["rock", "metal", "chifres", "horns", "🤘"]),
 }
 
 LLM_MODEL = "phi3"
@@ -25,24 +29,27 @@ _GESTOS_PROMPT = "\n".join(
 )
 
 _PROMPT_TEMPLATE = """\
-Você é um classificador de comandos para uma mão robótica. Sua única saída deve ser um único número inteiro.
+Você é um classificador de comandos matemáticos e de voz para uma mão robótica. 
+Sua ÚNICA saída deve ser um único número inteiro.
 
 Gestos disponíveis:
 {gestos}
 
-Regras de classificação:
-1. Se a entrada for uma expressão matemática, resolva-a PRIMEIRO.
-   - Se o resultado for um ID válido (0-6), retorne esse ID diretamente.
-   - Se o resultado estiver fora do intervalo, retorne o ID cujo gesto seja semanticamente mais próximo do número.
-   - Exemplos: "quanto é 3 - 3?" → 3-3=0 → retorne 0
-               "quanto é 2 + 1?" → 2+1=3 → retorne 3
-               "metade de 10"    → 5 → retorne 5
-2. Se a entrada for um comando de voz ou descrição, identifique o gesto correspondente e retorne seu ID.
-3. Se não for possível determinar com confiança, retorne -1.
+Regras de classificação matemáticas:
+1. Se a entrada contiver números (mesmo escritos por extenso em português, ex: "um", "dois", "três") e operações ("mais", "menos", "vezes", "dividido"), converta-os para matemática básica e resolva a conta PRIMEIRO.
+2. Exemplos de tradução matemática:
+   - "um mais um" ou "quanto é um mais um" → 1+1=2 → retorne 2
+   - "três menos três" → 3-3=0 → retorne 0
+   - "dois mais três" → 2+3=5 → retorne 5
+   - "metade de dez" → 10/2=5 → retorne 5
+
+Regras de comandos diretos:
+3. Se a entrada for apenas descritiva (ex: "faça o sinal de paz", "mão aberta"), identifique o gesto e retorne seu ID.
+4. Se não for possível determinar de jeito nenhum, retorne -1.
 
 Entrada do usuário: "{texto}"
 
-Responda APENAS com um único número inteiro (0 a 6, ou -1). Sem explicações, sem texto adicional.\
+Responda APENAS com um único número inteiro (0 a 6). Não escreva NENHUMA palavra, texto ou explicação adicional.
 """
 
 

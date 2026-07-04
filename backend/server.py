@@ -1,26 +1,37 @@
 import logging
 import uvicorn
 from typing import Optional
+from contextlib import asynccontextmanager  # 1. ADICIONADO AQUI
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # Importação dos módulos internos
 from brain import MapeadorDeSinais
-from bluetooth_sender import enviar_comando_bluetooth
+from bluetooth_sender import enviar_comando_bluetooth, conectar_bluetooth, desconectar_bluetooth
 
 # Configuração de Logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("server")
 
+# 2. COLOQUE A FUNÇÃO LIFESPAN AQUI (Substituindo os antigos @app.on_event)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # O que acontece no startup:
+    await conectar_bluetooth()
+    yield
+    # O que acontece no shutdown:
+    await desconectar_bluetooth()
+
+# 3. PASSAR O LIFESPAN DENTRO DO FASTAPI
 app = FastAPI(
     title="LIBRAS-BOT Backend",
     description="Servidor intermediário em Python (FalaComaMão) para processamento de voz e ponte BLE.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan  # ADICIONADO AQUI
 )
 
 # Configuração de CORS (Cross-Origin Resource Sharing)
-# Permite que o aplicativo móvel Flutter conecte sem restrições
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -103,5 +114,4 @@ async def processar_comando(requisicao: ComandoRequest):
     )
 
 if __name__ == "__main__":
-    # Roda o uvicorn na porta 5000 em modo reload para facilitar o desenvolvimento
     uvicorn.run("server:app", host="0.0.0.0", port=5000, reload=True)
