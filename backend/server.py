@@ -1,5 +1,6 @@
 import logging
 import uvicorn
+import asyncio
 from typing import Optional
 from contextlib import asynccontextmanager  # 1. ADICIONADO AQUI
 from fastapi import FastAPI
@@ -69,48 +70,39 @@ async def processar_comando(requisicao: ComandoRequest):
     texto = requisicao.texto
     logger.info(f"Requisição recebida com texto de voz: '{texto}'")
     
-    # 1. Camada de Processamento: Similaridade de Cosseno com Numpy + Ollama
-    codigo, descricao, similaridade = await mapeador.processar_comando(texto)
+    # 1. 'codigos' agora recebe uma LISTA
+    codigos, descricao, similaridade = await mapeador.processar_comando(texto)
     
-    if codigo is None:
-        detalhes = f"Comando descartado (Similaridade de cosseno: {similaridade:.4f} abaixo do limiar)."
-        logger.warning(detalhes)
-        return ComandoResponse(
-            sucesso=False,
-            texto_original=texto,
-            comando_detectado=None,
-            codigo=None,
-            confianca=similaridade,
-            detalhes=detalhes
-        )
+    if not codigos: # Se a lista estiver vazia
+        detalhes = "Comando não compreendido pela IA."
+        return ComandoResponse(sucesso=False, texto_original=texto, confianca=0.0, detalhes=detalhes)
     
-    logger.info(f"Comando compreendido e mapeado: {descricao} (Código: {codigo})")
+    logger.info(f"Comandos compreendidos: {descricao} (Códigos: {codigos})")
 
-    # 2. Camada de Comunicação: Bluetooth LE
-    envio_sucesso = await enviar_comando_bluetooth(codigo)
-    
-    if not envio_sucesso:
-        detalhes = f"Comando '{descricao}' mapeado, mas falhou ao enviar por Bluetooth para a mão robótica."
-        logger.error(detalhes)
-        return ComandoResponse(
-            sucesso=False,
-            texto_original=texto,
-            comando_detectado=descricao,
-            codigo=codigo,
-            confianca=similaridade,
-            detalhes=detalhes
-        )
+    # 2. Camada de Comunicação: Envia a sequência com delay
+    for cod in codigos:
+        if cod == -1:
+            logger.warning("Sinal de erro/inválido ignorado na sequência.")
+            continue
+            
+        envio_sucesso = await enviar_comando_bluetooth(cod)
+        
+        if not envio_sucesso:
+            # Se falhar no meio da sequência, aborta o resto
+            detalhes = f"Falha ao enviar o código {cod} via Bluetooth."
+            logger.error(detalhes)
+            return ComandoResponse(
+                sucesso=False, texto_original=texto, comando_detectado=descricao, confianca=similaridade, detalhes=detalhes
+            )
+            
+        # Pausa vital para o Arduino executar o movimento físico (4 segundos)
+        # Usar asyncio.sleep previne que o servidor inteiro trave durante a pausa
+        await asyncio.sleep(4) 
 
     # 3. Retorno com Sucesso
-    detalhes = f"Comando '{descricao}' mapeado e enviado com sucesso para a mão robótica via Bluetooth."
-    logger.info(detalhes)
+    detalhes = f"Sequência '{descricao}' enviada com sucesso."
     return ComandoResponse(
-        sucesso=True,
-        texto_original=texto,
-        comando_detectado=descricao,
-        codigo=codigo,
-        confianca=similaridade,
-        detalhes=detalhes
+        sucesso=True, texto_original=texto, comando_detectado=descricao, confianca=similaridade, detalhes=detalhes
     )
 
 if __name__ == "__main__":
