@@ -27,7 +27,7 @@ GESTOS = {
     16: ("Sinal de Água em LIBRAS (Indicador batendo repetidas vezes)", ["agua", "água", "sede", "beber", "libras agua"])
 }
 
-LLM_MODEL = "phi3"
+LLM_MODEL = "llama3.1"
 
 # Bloco de texto que descreve os gestos, reutilizado no prompt do LLM
 _GESTOS_PROMPT = "\n".join(
@@ -35,26 +35,47 @@ _GESTOS_PROMPT = "\n".join(
 )
 
 _PROMPT_TEMPLATE = """\
-Você é o cérebro lógico de uma mão robótica de LIBRAS. 
-Sua ÚNICA saída deve ser uma sequência de números inteiros separados por vírgula (ex: 2 ou 5,5,2). Não escreva NENHUM texto adicional, justificativa ou formatação.
+Você é o controlador lógico de uma mão robótica de LIBRAS.
+Sua ÚNICA saída deve ser uma sequência de números inteiros separados por vírgula. 
+NUNCA escreva justificativas, introduções, textos ou formatação extra. APENAS NÚMEROS.
 
-Gestos disponíveis (ID: Descrição):
+GESTOS DISPONÍVEIS (ID: Descrição):
 {gestos}
 
-REGRAS DE PROCESSAMENTO:
-1. COMANDOS DIRETOS: Se a entrada descrever um gesto explicitamente (ex: "faça o sinal de paz", "letra L"), retorne o ID correspondente.
-2. PERGUNTAS OBJETIVAS E CONHECIMENTOS GERAIS: Se a entrada for uma pergunta com resposta numérica (ex: "quantas rodas tem um carro?", "qual a raiz quadrada de 9?"), descubra a resposta lógica/matemática PRIMEIRO.
-3. DECOMPOSIÇÃO DE NÚMEROS (IMPORTANTE): Se a resposta numérica for MAIOR que 5, você DEVE decompor o valor usando o gesto 5 repetidas vezes, somado ao resto.
-   - Exemplo A: Resposta 12 -> Retorne: 5,5,2
-   - Exemplo B: Resposta 7 -> Retorne: 5,2
-   - Exemplo C: Resposta 15 -> Retorne: 5,5,5
-   - Exemplo D: "duas vezes três" -> Resposta 6 -> Retorne: 5,1
-4. NÚMEROS ATÉ 5: Se a resposta for 5 ou menor, retorne apenas o número (ex: "dois mais dois" -> Retorne: 4).
-5. CASO INVÁLIDO: Se a pergunta for impossível de responder ou não se encaixar em gestos/números, retorne -1.
+REGRAS DE PROCESSAMENTO LÓGICO:
+1. COMANDOS DIRETOS: Identifique a intenção do usuário e retorne o ID do gesto (ex: "oi", "abrir a mão", "descanso").
+2. CÁLCULOS E PERGUNTAS: Descubra a resposta numérica real primeiro. 
+   - Se o resultado for 5 ou menor, retorne o ID numérico diretamente.
+   - Se o resultado for MAIOR que 5, decomponha o valor repetindo o número 5 somado ao resto (ex: 12 deve virar 5,5,2).
+3. PROTEÇÃO CONTRA ERROS: Se a pergunta for impossível, não tiver resposta numérica ou não fizer sentido lógico, retorne EXATAMENTE 15 (Sinal de Não).
 
-Entrada do usuário: "{texto}"
-Saída esperada (apenas números e vírgulas):
-"""
+EXEMPLOS ESTRITOS (Siga este exato formato):
+Entrada: "Oi"
+Saída: 11
+
+Entrada: "Abre a mão"
+Saída: 5
+
+Entrada: "Coloque a mão em descanso"
+Saída: 5
+
+Entrada: "Quanto é 1 + 1?"
+Saída: 2
+
+Entrada: "Quantos meses tem um ano?"
+Saída: 5,5,2
+
+Entrada: "Quantos dias tem uma semana?"
+Saída: 5,2
+
+Entrada: "Qual é a capital do Brasil?"
+Saída: 15
+
+Entrada: "Dê um salto mortal"
+Saída: 15
+
+Entrada: "{texto}"
+Saída: """
 
 
 class MapeadorDeSinais:
