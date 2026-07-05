@@ -36,43 +36,32 @@ _GESTOS_PROMPT = "\n".join(
 
 _PROMPT_TEMPLATE = """\
 Você é o controlador lógico de uma mão robótica de LIBRAS.
-Sua ÚNICA saída deve ser uma sequência de números inteiros separados por vírgula. 
-NUNCA escreva justificativas, introduções, textos ou formatação extra. APENAS NÚMEROS.
+Sua ÚNICA saída permitida é usar um dos prefixos abaixo seguido de um número. 
+PROIBIDO escrever justificativas ou textos.
 
 GESTOS DISPONÍVEIS (ID: Descrição):
 {gestos}
 
-REGRAS DE PROCESSAMENTO LÓGICO:
-1. COMANDOS DIRETOS: Identifique a intenção do usuário e retorne o ID do gesto (ex: "oi", "abrir a mão", "descanso").
-2. CÁLCULOS E PERGUNTAS: Descubra a resposta numérica real primeiro. 
-   - Se o resultado for 5 ou menor, retorne o ID numérico diretamente.
-   - Se o resultado for MAIOR que 5, decomponha o valor repetindo o número 5 somado ao resto (ex: 12 deve virar 5,5,2).
-3. PROTEÇÃO CONTRA ERROS: Se a pergunta for impossível, não tiver resposta numérica ou não fizer sentido lógico, retorne EXATAMENTE 15 (Sinal de Não).
+REGRAS DE CLASSIFICAÇÃO:
+1. COMANDOS DIRETOS: Se o usuário pedir um gesto específico, retorne "GESTO: [ID]".
+2. PERGUNTAS E MATEMÁTICA: Descubra a resposta numérica real e retorne "VALOR: [RESULTADO]".
+3. PROTEÇÃO: Se a pergunta não tiver resposta numérica ou for impossível, retorne "GESTO: 15" (Sinal de Não).
 
-EXEMPLOS ESTRITOS (Siga este exato formato):
+EXEMPLOS OBRIGATÓRIOS:
 Entrada: "Oi"
-Saída: 11
+Saída: GESTO: 11
 
 Entrada: "Abre a mão"
-Saída: 5
+Saída: GESTO: 5
 
-Entrada: "Coloque a mão em descanso"
-Saída: 5
-
-Entrada: "Quanto é 1 + 1?"
-Saída: 2
+Entrada: "Quanto é 3x5?"
+Saída: VALOR: 15
 
 Entrada: "Quantos meses tem um ano?"
-Saída: 5,5,2
+Saída: VALOR: 12
 
-Entrada: "Quantos dias tem uma semana?"
-Saída: 5,2
-
-Entrada: "Qual é a capital do Brasil?"
-Saída: 15
-
-Entrada: "Dê um salto mortal"
-Saída: 15
+Entrada: "Qual é a capital da França?"
+Saída: GESTO: 15
 
 Entrada: "{texto}"
 Saída: """
@@ -84,21 +73,55 @@ class MapeadorDeSinais:
         logger.info(f"MapeadorDeSinais iniciado com modelo '{self.llm_model}'.")
 
     async def _classificar_com_llm(self, texto: str) -> Optional[list]:
-        """Pede ao LLM uma sequência de IDs (0-16). Retorna uma lista de inteiros."""
         prompt = _PROMPT_TEMPLATE.format(gestos=_GESTOS_PROMPT, texto=texto)
         try:
             client = ollama.AsyncClient()
-            response = await client.generate(model=self.llm_model, prompt=prompt)
-            raw = response["response"].strip()
+            response = await client.generate(
+                model=self.llm_model, 
+                prompt=prompt,
+                options={
+                    "temperature": 0.0,
+                    "top_p": 0.1,
+                    "num_predict": 20 # Aumentado um pouco para caber a palavra "VALOR: X"
+                }
+            )
+            
+            # Deixa tudo maiúsculo para facilitar a busca
+            raw = response["response"].strip().upper()
             logger.info(f"LLM bruto: '{raw}'")
 
-            # Acha todos os números na resposta (ex: de "5, 5, 2" extrai ['5', '5', '2'])
-            numeros = re.findall(r"-?\d+", raw)
-            if numeros:
-                # Converte para int e filtra apenas os IDs válidos do seu projeto (0 a 16)
-                gids = [int(n) for n in numeros if -1 <= int(n) <= 16]
-                if gids:
-                    return gids # Agora retorna uma lista!
+            # CASO 1: A IA identificou que é um comando direto de GESTO
+            if "GESTO:" in raw:
+                match = re.search(r"GESTO:\s*(\d+)", raw)
+                if match:
+                    gid = int(match.group(1))
+                    if 0 <= gid <= 16:
+                        return [gid]
+            
+            # CASO 2: A IA identificou que é uma resposta matemática/conhecimento
+            elif "VALOR:" in raw:
+                match = re.search(r"VALOR:\s*(\d+)", raw)
+                if match:
+                    valor = int(match.group(1))
+                    
+                    if valor == 0:
+                        return [0]
+                    
+                    # --- DECOMPOSIÇÃO FEITA PELO PYTHON (100% à prova de falhas) ---
+                    sequencia = []
+                    while valor > 5:
+                        sequencia.append(5)
+                        valor -= 5
+                    
+                    if valor > 0:
+                        sequencia.append(valor)
+                        
+                    return sequencia
+            
+            # Fallback de segurança se a IA não mandar o formato certo
+            elif raw.strip() == "15":
+                return [15]
+
         except Exception as e:
             logger.error(f"Erro ao chamar LLM: {e}")
         return None
