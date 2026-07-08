@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/marcos/Documentos/UFES/PIC2/Mao-Robotica-com-Movimentacao-de-Pulso/backend/.venv
+set -gx VIRTUAL_ENV /home/mvssilva/Documents/Mao-Robotica-com-Movimentacao-de-Pulso/backend/.venv
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH

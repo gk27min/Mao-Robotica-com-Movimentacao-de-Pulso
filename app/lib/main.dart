@@ -11,6 +11,30 @@ void main() {
   runApp(const FalaComaMaoApp());
 }
 
+Future<bool> enviarGestoDiretoParaServidor(int comando) async {
+  const String serverUrl = 'http://10.9.5.66:5000/api/gesto'; // <-- /api/gesto
+  final url = Uri.parse(serverUrl);
+
+  try {
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'comando': comando}),
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 200) {
+      print("Gesto $comando enviado com sucesso!");
+      return true;
+    } else {
+      print("Erro no servidor (${response.statusCode}): ${response.body}");
+      return false;
+    }
+  } catch (e) {
+    print("Erro ao enviar gesto: $e");
+    return false;
+  }
+}
+
 class FalaComaMaoApp extends StatelessWidget {
   const FalaComaMaoApp({super.key});
 
@@ -131,6 +155,8 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  
+
   void _processFinalText(String text) {
     if (text.isEmpty) return;
 
@@ -216,7 +242,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // Endereço IP do servidor Python na rede local.
-  static const String _serverUrl = 'http://192.168.18.201:5000/api/comando';
+  static const String _serverUrl = 'http://10.9.5.66:5000/api/comando';
 
   Future<void> enviarComandoParaServidor(String texto, int messageIndex) async {
     final url = Uri.parse(_serverUrl);
@@ -226,7 +252,7 @@ class _ChatScreenState extends State<ChatScreen> {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'texto': texto}),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 60));
 
       if (!mounted) return;
 
@@ -758,24 +784,125 @@ class SignsLibraryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Lista 100% atualizada e espelhada com o backend e o Arduino (0 a 19 e 100 a 119)
+    final List<Map<String, dynamic>> configuracoesMao = [
+      // --- BLOCO 1: ESTÁTICOS (Pulso Fixo) ---
+      {'comando': 0, 'titulo': 'CM - 000', 'descricao': 'Mão totalmente fechada'},
+      {'comando': 1, 'titulo': 'CM - 001', 'descricao': 'Dedo indicador'},
+      {'comando': 2, 'titulo': 'CM - 002', 'descricao': 'Indicador e médio'},
+      {'comando': 3, 'titulo': 'CM - 003', 'descricao': 'Indicador, médio e anelar'},
+      {'comando': 4, 'titulo': 'CM - 004', 'descricao': 'Indicador a mindinho'},
+      {'comando': 5, 'titulo': 'CM - 005', 'descricao': 'Todos os dedos'},
+      {'comando': 6, 'titulo': 'CM - 006', 'descricao': 'Polegar, indicador e mindinho'},
+      {'comando': 7, 'titulo': 'CM - 007', 'descricao': 'Polegar'},
+      {'comando': 8, 'titulo': 'CM - 008', 'descricao': 'Dedo médio'},
+      {'comando': 9, 'titulo': 'CM - 009', 'descricao': 'Polegar e mindinho'},
+      {'comando': 10, 'titulo': 'CM - 010', 'descricao': 'Indicador e mindinho'},
+      {'comando': 11, 'titulo': 'CM - 011', 'descricao': 'Mindinho'},
+      {'comando': 12, 'titulo': 'CM - 012', 'descricao': 'Polegar e indicador'},
+      {'comando': 13, 'titulo': 'CM - 013', 'descricao': 'Médio, anelar e mindinho'},
+      {'comando': 14, 'titulo': 'CM - 014', 'descricao': 'Letra C (Dedos curvados)'},
+      {'comando': 15, 'titulo': 'CM - 015', 'descricao': 'Letra A (Polegar lateral)'},
+      {'comando': 16, 'titulo': 'CM - 016', 'descricao': 'Letra O (Círculo)'},
+      {'comando': 17, 'titulo': 'CM - 017', 'descricao': 'Base para Letra H'},
+      
+      // --- BLOCO 1.1: ESTÁTICOS COM MOVIMENTO DE DEDO ---
+      {'comando': 18, 'titulo': 'CM - 018', 'descricao': 'Sinal de Água (Indicador batendo)'},
+      {'comando': 19, 'titulo': 'CM - 019', 'descricao': 'Sinal de Aspas (Indicador e médio dobrando)'},
+
+      // --- BLOCO 2: DINÂMICOS (Com oscilação do pulso) ---
+      {'comando': 100, 'titulo': 'CM - 100', 'descricao': 'Mão fechada'},
+      {'comando': 101, 'titulo': 'CM - 101', 'descricao': 'Indicador (Não)'},
+      {'comando': 102, 'titulo': 'CM - 102', 'descricao': 'Indicador e médio'},
+      {'comando': 103, 'titulo': 'CM - 103', 'descricao': 'Três dedos'},
+      {'comando': 104, 'titulo': 'CM - 104', 'descricao': 'Quatro dedos'},
+      {'comando': 105, 'titulo': 'CM - 105', 'descricao': 'Mão aberta (Aceno)'},
+      {'comando': 106, 'titulo': 'CM - 106', 'descricao': 'Te amo balançando'},
+      {'comando': 107, 'titulo': 'CM - 107', 'descricao': 'Polegar'},
+      {'comando': 108, 'titulo': 'CM - 108', 'descricao': 'Dedo médio'},
+      {'comando': 109, 'titulo': 'CM - 109', 'descricao': 'Shaka balançando'},
+      {'comando': 110, 'titulo': 'CM - 110', 'descricao': 'Rock balançando'},
+      {'comando': 111, 'titulo': 'CM - 111', 'descricao': 'Mindinho'},
+      {'comando': 112, 'titulo': 'CM - 112', 'descricao': 'Polegar e indicador'},
+      {'comando': 113, 'titulo': 'CM - 113', 'descricao': 'Médio, anelar, mindinho balançando'},
+      {'comando': 114, 'titulo': 'CM - 114', 'descricao': 'Letra C balançando'},
+      {'comando': 115, 'titulo': 'CM - 115', 'descricao': 'Letra A balançando'},
+      {'comando': 116, 'titulo': 'CM - 116', 'descricao': 'Letra O balançando'},
+      {'comando': 117, 'titulo': 'CM - 117', 'descricao': 'Letra H (Base com rotação)'},
+      {'comando': 118, 'titulo': 'CM - 118', 'descricao': 'Sinal de Água do pulso'},
+      {'comando': 119, 'titulo': 'CM - 119', 'descricao': 'Sinal de Aspas do pulso'},
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sinais Registrados'),
+        title: const Text('Biblioteca de Gestos'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const RegisterSignScreen()),
+      body: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 200,    
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.85, 
+        ),
+        itemCount: configuracoesMao.length,
+        itemBuilder: (context, index) {
+          final cm = configuracoesMao[index];
+          
+          return InkWell(
+            onTap: () async {
+              final messenger = ScaffoldMessenger.of(context); // captura antes do await
+              final titulo = cm['titulo'] as String;
+
+              messenger.showSnackBar(
+                SnackBar(content: Text('Enviando $titulo...')),
+              );
+
+              final ok = await enviarGestoDiretoParaServidor(cm['comando'] as int);
+
+              messenger.hideCurrentSnackBar();
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(ok ? '$titulo enviado!' : 'Falha ao enviar $titulo'),
+                  backgroundColor: ok ? Colors.green : Colors.red,
+                ),
+              );
+            },
+            child: Card(
+              elevation: 2, 
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.grey.shade200, width: 1), 
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    HandGestureIcon(
+                      gestureLevel: cm['comando'] as int, 
+                      size: 80,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      cm['titulo'] as String,
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      cm['descricao'] as String,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Cadastrar Sinal'),
-      ),
-      body: const Center(
-        child: Text('Biblioteca de gestos', style: TextStyle(fontSize: 18)),
       ),
     );
   }
@@ -795,6 +922,184 @@ class RegisterSignScreen extends StatelessWidget {
       body: const Center(
         child: Text('Formulário de cadastro', style: TextStyle(fontSize: 18)),
       ),
+    );
+  }
+}
+
+// Transformado em StatefulWidget para suportar o Loop de animação dos dedos
+class HandGestureIcon extends StatefulWidget {
+  final int gestureLevel;
+  final double size;
+
+  const HandGestureIcon({
+    super.key,
+    required this.gestureLevel,
+    this.size = 100.0,
+  });
+
+  @override
+  State<HandGestureIcon> createState() => _HandGestureIconState();
+}
+
+class _HandGestureIconState extends State<HandGestureIcon> with SingleTickerProviderStateMixin {
+  late AnimationController _fingerController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Controlador de animação que vai e volta (looping infinito)
+    _fingerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _fingerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final activeColor = Theme.of(context).colorScheme.primary;
+    final inactiveColor = Colors.grey.shade300; 
+
+    final int baseGesture = widget.gestureLevel % 100;
+    final bool hasWristMovement = widget.gestureLevel >= 100;
+
+    // Estados dos dedos: 0 = Fechado, 1 = Aberto, 2 = Curvado (metade), 3 = Batendo (loop)
+    int ind = 0, mei = 0, ane = 0, min = 0, pol = 0;
+
+    switch (baseGesture) {
+      case 1:  ind = 1; break;
+      case 2:  ind = 1; mei = 1; break;
+      case 3:  ind = 1; mei = 1; ane = 1; break;
+      case 4:  ind = 1; mei = 1; ane = 1; min = 1; break;
+      case 5:  ind = 1; mei = 1; ane = 1; min = 1; pol = 1; break;
+      case 6:  ind = 1; min = 1; pol = 1; break;
+      case 7:  pol = 1; break;
+      case 8:  mei = 1; break;
+      case 9:  min = 1; pol = 1; break;
+      case 10: ind = 1; min = 1; break;
+      case 11: min = 1; break;
+      case 12: ind = 1; pol = 1; break;
+      case 13: mei = 1; ane = 1; min = 1; break;
+      case 14: ind = 2; mei = 2; ane = 2; min = 2; pol = 2; break; // Letra C (Curvados)
+      case 15: pol = 2; break; // Letra A (Apenas polegar lateral relaxado)
+      case 16: ind = 0; mei = 2; ane = 2; min = 2; pol = 2; break; // Letra O (Círculo)
+      case 17: ind = 1; pol = 2; break; // Base H (Indicador aberto, polegar metade)
+      case 18: ind = 3; break; // Água (Indicador batendo repetidamente)
+      case 19: ind = 3; mei = 3; break; // Aspas (Indicador e médio batendo)
+    }
+
+    final fw = widget.size * 0.13; 
+    final palmWidth = widget.size * 0.55;
+    final palmHeight = widget.size * 0.50;
+
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Polegar
+          Positioned(
+            bottom: widget.size * 0.18,
+            right: widget.size * 0.15, 
+            child: Transform.rotate(
+              angle: 0.78, 
+              alignment: Alignment.bottomLeft,
+              child: _buildRoboticFinger(pol, activeColor, inactiveColor, fw, widget.size * 0.35),
+            ),
+          ),
+
+          // Chassi da Mão
+          Positioned(
+            bottom: widget.size * 0.05,
+            left: widget.size * 0.20,
+            child: Container(
+              width: palmWidth,
+              height: palmHeight,
+              decoration: BoxDecoration(
+                color: activeColor,
+                borderRadius: BorderRadius.circular(widget.size * 0.1),
+              ),
+            ),
+          ),
+
+          // Os 4 dedos superiores
+          Positioned(
+            bottom: widget.size * 0.52, 
+            left: widget.size * 0.20,
+            child: SizedBox(
+              width: palmWidth,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _buildRoboticFinger(min, activeColor, inactiveColor, fw, widget.size * 0.40),
+                  _buildRoboticFinger(ane, activeColor, inactiveColor, fw, widget.size * 0.45),
+                  _buildRoboticFinger(mei, activeColor, inactiveColor, fw, widget.size * 0.50),
+                  _buildRoboticFinger(ind, activeColor, inactiveColor, fw, widget.size * 0.40),
+                ],
+              ),
+            ),
+          ),
+
+          // Indicador de Movimento do Pulso
+          if (hasWristMovement)
+            Positioned(
+              top: -widget.size * 0.15,
+              right: -widget.size * 0.15,
+              child: Icon(
+                Icons.autorenew_rounded, 
+                color: activeColor, 
+                size: widget.size * 0.30,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // O desenho de cada dedo agora reage aos 4 estados
+  Widget _buildRoboticFinger(int state, Color activeColor, Color inactiveColor, double width, double maxHeight) {
+    return AnimatedBuilder(
+      animation: _fingerController,
+      builder: (context, child) {
+        double currentHeight = maxHeight * 0.25; // Altura base (Fechado)
+        Color currentColor = inactiveColor;
+
+        if (state == 1) {
+          // Totalmente Aberto
+          currentHeight = maxHeight;
+          currentColor = activeColor;
+        } else if (state == 2) {
+          // Curvado (Metade da altura) - Efeito de pintura pela metade
+          currentHeight = maxHeight * 0.55; 
+          currentColor = activeColor;
+        } else if (state == 3) {
+          // Batendo (Loop que varia a altura do dedo para cima e para baixo)
+          // Varia de 25% (fechado) a 100% (aberto)
+          currentHeight = maxHeight * (0.25 + (0.75 * _fingerController.value));
+          // Faz a cor acender e apagar durante a batida
+          currentColor = Color.lerp(inactiveColor, activeColor, _fingerController.value) ?? activeColor;
+        }
+
+        return Container(
+          width: width,
+          height: currentHeight, 
+          decoration: BoxDecoration(
+            color: currentColor,
+            borderRadius: BorderRadius.circular(width / 2),
+            border: Border.all(
+              color: Colors.white,
+              width: 1.5,
+            ),
+          ),
+        );
+      }
     );
   }
 }

@@ -97,27 +97,27 @@ void executarComando(int comando)
 {
   switch (comando)
   {
-  case 0:
+  case 000:
     Serial.println("Executando: Mao fechada");
     fecharMao();
     break;
-  case 1:
+  case 001:
     Serial.println("Executando: Um");
     um();
     break;
-  case 2:
+  case 002:
     Serial.println("Executando: Dois");
     dois();
     break;
-  case 3:
+  case 003:
     Serial.println("Executando: Tres");
     tres();
     break;
-  case 4:
+  case 004:
     Serial.println("Executando: Quatro");
     quatro();
     break;
-  case 5:
+  case 005:
     Serial.println("Executando: Cinco ou Mao Aberta");
     cinco();
     break;

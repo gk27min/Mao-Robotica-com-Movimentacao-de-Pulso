@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # Importação dos módulos internos
-from brain import MapeadorDeSinais
+from brain import MapeadorDeSinais, GESTOS
 from bluetooth_sender import enviar_comando_bluetooth, conectar_bluetooth, desconectar_bluetooth
 
 # Configuração de Logs
@@ -49,6 +49,9 @@ mapeador = MapeadorDeSinais()
 # =====================================================================
 class ComandoRequest(BaseModel):
     texto: str
+
+class GestoRequest(BaseModel):
+    comando: int
 
 class ComandoResponse(BaseModel):
     sucesso: bool
@@ -103,6 +106,36 @@ async def processar_comando(requisicao: ComandoRequest):
     detalhes = f"Sequência '{descricao}' enviada com sucesso."
     return ComandoResponse(
         sucesso=True, texto_original=texto, comando_detectado=descricao, confianca=similaridade, detalhes=detalhes
+    )
+
+@app.post("/api/gesto", response_model=ComandoResponse)
+async def enviar_gesto_direto(requisicao: GestoRequest):
+    codigo = requisicao.comando
+    logger.info(f"Gesto direto recebido da biblioteca: {codigo}")
+
+    # Valida se o código existe na biblioteca
+    if codigo not in GESTOS:
+        detalhes = f"Código de gesto {codigo} não existe na biblioteca."
+        return ComandoResponse(
+            sucesso=False, texto_original=str(codigo), confianca=0.0, detalhes=detalhes
+        )
+
+    descricao = GESTOS[codigo][0]
+
+    # Envia direto pro Bluetooth, sem passar pela LLM
+    envio_sucesso = await enviar_comando_bluetooth(codigo)
+
+    if not envio_sucesso:
+        detalhes = f"Falha ao enviar o gesto {codigo} via Bluetooth."
+        return ComandoResponse(
+            sucesso=False, texto_original=str(codigo), comando_detectado=descricao,
+            codigo=codigo, confianca=1.0, detalhes=detalhes
+        )
+
+    detalhes = f"Gesto '{descricao}' enviado com sucesso."
+    return ComandoResponse(
+        sucesso=True, texto_original=str(codigo), comando_detectado=descricao,
+        codigo=codigo, confianca=1.0, detalhes=detalhes
     )
 
 if __name__ == "__main__":

@@ -8,25 +8,60 @@ logger = logging.getLogger("brain")
 
 # Gestos disponíveis: ID → (Descrição semântica e física, palavras-chave para fallback)
 GESTOS = {
-    0: ("Mão totalmente fechada / Punho", ["fechar", "punho", "zero", "0", "fechada"]),
-    1: ("Apontar (Apenas indicador aberto)", ["apontar", "indicador", "ponto", "um", "1", "direção"]),
-    2: ("Paz e Vitória (Indicador e médio abertos)", ["paz", "vitoria", "vitória", "peace", "victory", "dois", "2", "v"]),
-    3: ("Três (Indicador, médio e anelar abertos)", ["tres", "três", "3"]),
-    4: ("Quatro (Indicador, médio, anelar e mindinho abertos, polegar fechado)", ["quatro", "4", "B em libras"]),
-    5: ("Mão totalmente aberta / Descanso", ["abrir", "aberta", "estender", "todos", "dedos", "cinco", "5", "espalmar", "pare", "descanso", "repouso", "posição inicial"]),
-    6: ("Sinal Eu te amo em LIBRAS (Polegar, indicador e mindinho abertos)", ["amo", "love", "libras", "te amo", "ily"]),
-    7: ("Joinha / Positivo (Apenas polegar aberto)", ["joinha", "positivo", "bom", "legal", "like", "curtir", "polegar", "cima"]),
-    8: ("Dedo do meio (Apenas dedo médio aberto)", ["meio", "dedo do meio", "ofensivo", "médio", "xingamento"]),
-    9: ("Hang Loose / Shaka (Polegar e mindinho abertos)", ["hanglose", "hang loose", "shaka", "surf", "surfista", "telefone", "alô", "🤙"]),
-    10: ("Rock and Roll (Indicador e mindinho abertos)", ["rock", "metal", "chifres", "horns", "🤘"]),
-    11: ("Aceno (Mão aberta com oscilação do pulso)", ["aceno", "acenar", "tchau", "oi", "olá", "hello", "wave", "saudação", "cumprimentar"]),
-    12: ("Letra I em LIBRAS (Apenas mindinho estendido)", ["i", "letra i", "libras i", "mindinho"]),
-    13: ("Letra L em LIBRAS (Polegar e indicador formando um L)", ["l", "letra l", "libras l", "loser", "faz o l"]),
-    14: ("Sinal de OK", ["ok", "certo", "tudo certo", "concordo", "beleza", "perfeito"]),
-    15: ("Sinal de Não (Dedo indicador estendido com oscilação de pulso)", ["nao", "não", "negativo", "recusa", "discordo", "rejeitar"]),
-    16: ("Sinal de Água em LIBRAS (Indicador batendo repetidas vezes)", ["agua", "água", "sede", "beber", "libras agua"])
-}
+    # ==========================================
+    # BLOCO 1: ESTÁTICOS (Pulso Fixo) -> 0 a 17
+    # ==========================================
+    0: ("CM - 000: Mão totalmente fechada", ["fechar", "punho", "zero", "fechada"]),
+    1: ("CM - 001: Dedo indicador", ["apontar", "indicador", "ponto", "direção"]),
+    2: ("CM - 002: Indicador e médio", ["paz", "vitoria", "vitória", "peace", "victory"]),
+    3: ("CM - 003: Indicador, médio e anelar", ["tres", "três"]),
+    4: ("CM - 004: Indicador, médio, anelar e mindinho", ["quatro"]),
+    5: ("CM - 005: Todos os dedos", ["abrir", "aberta", "estender", "todos", "dedos", "cinco", "espalmar", "pare", "descanso", "repouso", "posição inicial"]),
+    6: ("CM - 006: Polegar, indicador e mindinho", ["amo", "love", "te amo", "ily"]),
+    7: ("CM - 007: Polegar", ["joinha", "positivo", "bom", "legal", "like", "curtir", "polegar", "valeu"]),
+    8: ("CM - 008: Dedo médio", ["dedo do meio", "ofensivo", "médio", "xingamento"]),
+    9: ("CM - 009: Polegar e mindinho", ["hanglose", "hang loose", "shaka", "surf", "surfista", "telefone", "alô"]),
+    10: ("CM - 010: Indicador e mindinho", ["rock", "metal", "chifres", "horns"]),
+    11: ("CM - 011: Mindinho", ["letra i", "libras i", "mindinho"]),
+    12: ("CM - 012: Polegar e indicador", ["letra l", "libras l", "loser", "faz o l"]),
+    13: ("CM - 013: Médio, anelar e mindinho", ["ok", "certo", "tudo certo", "concordo", "beleza", "perfeito"]),
+    14: ("CM - 014: Letra C em LIBRAS (Dedos curvados)", ["letra c", "libras c"]),
+    15: ("CM - 015: Letra A em LIBRAS", ["letra a", "libras a"]),
+    16: ("CM - 016: Letra O em LIBRAS (Dedos formando um círculo)", ["letra o", "libras o", "zero libras"]),
+    17: ("CM - 017: Base para Letra H (Indicador e médio estendidos, polegar lateral)", ["base h"]),
 
+    # ==========================================
+    # BLOCO 1.1: ESTÁTICOS COM MOV. DE DEDOS -> 18 a 20
+    # ==========================================
+    18: ("CM - 018: Sinal de Água (Indicador batendo repetidas vezes)", ["agua", "água", "sede", "beber"]),
+    19: ("CM - 019: Sinal de Aspas (Indicador e médio dobrando repetidas vezes)", ["aspas", "citação", "quote", "entre aspas"]),
+    20: ("CM - 020: Reservado para futuros", ["reservado"]),
+
+    # ==========================================
+    # BLOCO 2: DINÂMICOS (Com oscilação do pulso) -> 100 a 120
+    # ==========================================
+    100: ("CM - 100: Mão totalmente fechada com oscilação", ["bater", "soco", "bater na porta"]),
+    101: ("CM - 101: Dedo indicador com oscilação (Sinal de Não)", ["nao", "não", "negativo", "recusa", "discordo", "rejeitar"]),
+    102: ("CM - 102: Indicador e médio com oscilação", ["observar", "olhar"]),
+    103: ("CM - 103: Indicador, médio e anelar com oscilação", ["tres balançando"]),
+    104: ("CM - 104: Indicador, médio, anelar e mindinho com oscilação", ["quatro balançando"]),
+    105: ("CM - 105: Todos os dedos com oscilação (Aceno)", ["aceno", "acenar", "tchau", "oi", "olá", "ola", "hello", "wave", "saudação", "cumprimentar", "e ai", "e aí"]),
+    106: ("CM - 106: Polegar, indicador e mindinho com oscilação", ["te amo balançando", "ily com movimento"]),
+    107: ("CM - 107: Polegar com oscilação", ["joinha balançando", "positivo balançando"]),
+    108: ("CM - 108: Dedo médio com oscilação", ["médio balançando"]),
+    109: ("CM - 109: Polegar e mindinho com oscilação", ["shaka balançando", "telefone balançando"]),
+    110: ("CM - 110: Indicador e mindinho com oscilação", ["rock balançando"]),
+    111: ("CM - 111: Mindinho com oscilação", ["mindinho balançando"]),
+    112: ("CM - 112: Polegar e indicador com oscilação", ["letra l balançando"]),
+    113: ("CM - 113: Médio, anelar e mindinho com oscilação", ["ok balançando"]),
+    114: ("CM - 114: Letra C com oscilação do pulso", ["c balançando"]),
+    115: ("CM - 115: Letra A com oscilação do pulso", ["a balançando"]),
+    116: ("CM - 116: Letra O com oscilação do pulso", ["o balançando"]),
+    117: ("CM - 117: Letra H em LIBRAS (Base do H com rotação do pulso)", ["letra h", "libras h"]),
+    118: ("CM - 118: Sinal de Água com oscilação do pulso", ["agua balançando"]),
+    119: ("CM - 119: Sinal de Aspas com oscilação do pulso", ["aspas balançando"]),
+    120: ("CM - 120: Reservado com oscilação", ["reservado balançando"]),
+}
 LLM_MODEL = "llama3.1"
 
 # Bloco de texto que descreve os gestos, reutilizado no prompt do LLM
@@ -35,33 +70,45 @@ _GESTOS_PROMPT = "\n".join(
 )
 
 _PROMPT_TEMPLATE = """\
-Você é o controlador lógico de uma mão robótica de LIBRAS.
-Sua ÚNICA saída permitida é usar um dos prefixos abaixo seguido de um número. 
-PROIBIDO escrever justificativas ou textos.
+Você é o controlador de uma mão robótica de LIBRAS.
+Sua tarefa: dada a frase do usuário, escolher O ÚNICO gesto da lista abaixo
+que melhor representa o que a frase quer dizer.
+
+Sua ÚNICA saída permitida é uma destas duas formas:
+  - "GESTO: <ID>"  (usando um ID que EXISTE na lista abaixo)
+  - "NENHUM"       (quando nada na lista se encaixa na frase)
+PROIBIDO escrever qualquer outra coisa, explicação ou texto extra.
 
 GESTOS DISPONÍVEIS (ID: Descrição):
 {gestos}
 
-REGRAS DE CLASSIFICAÇÃO:
-1. COMANDOS DIRETOS: Se o usuário pedir um gesto específico, retorne "GESTO: [ID]".
-2. PERGUNTAS E MATEMÁTICA: Descubra a resposta numérica real e retorne "VALOR: [RESULTADO]".
-3. PROTEÇÃO: Se a pergunta não tiver resposta numérica ou for impossível, retorne "GESTO: 15" (Sinal de Não).
-
-EXEMPLOS OBRIGATÓRIOS:
+EXEMPLOS (siga exatamente este formato):
 Entrada: "Oi"
-Saída: GESTO: 11
+Saída: GESTO: 105
+
+Entrada: "Tchau, até mais"
+Saída: GESTO: 105
 
 Entrada: "Abre a mão"
 Saída: GESTO: 5
 
-Entrada: "Quanto é 3x5?"
-Saída: VALOR: 15
+Entrada: "Fecha a mão"
+Saída: GESTO: 0
 
-Entrada: "Quantos meses tem um ano?"
-Saída: VALOR: 12
+Entrada: "Manda um joinha"
+Saída: GESTO: 7
 
-Entrada: "Qual é a capital da França?"
-Saída: GESTO: 15
+Entrada: "Te amo"
+Saída: GESTO: 6
+
+Entrada: "Faz o sinal de paz"
+Saída: GESTO: 2
+
+Entrada: "Não"
+Saída: GESTO: 101
+
+Entrada: "asdfghjkl"
+Saída: NENHUM
 
 Entrada: "{texto}"
 Saída: """
@@ -72,72 +119,58 @@ class MapeadorDeSinais:
         self.llm_model = llm_model
         logger.info(f"MapeadorDeSinais iniciado com modelo '{self.llm_model}'.")
 
-    async def _classificar_com_llm(self, texto: str) -> Optional[list]:
+    async def _classificar_com_llm(self, texto: str) -> Optional[int]:
         prompt = _PROMPT_TEMPLATE.format(gestos=_GESTOS_PROMPT, texto=texto)
         try:
             client = ollama.AsyncClient()
             response = await client.generate(
-                model=self.llm_model, 
+                model=self.llm_model,
                 prompt=prompt,
                 options={
                     "temperature": 0.0,
                     "top_p": 0.1,
-                    "num_predict": 20 # Aumentado um pouco para caber a palavra "VALOR: X"
-                }
+                    "num_predict": 10,  # basta pra "GESTO: NNN" ou "NENHUM"
+                },
             )
-            
-            # Deixa tudo maiúsculo para facilitar a busca
+
             raw = response["response"].strip().upper()
             logger.info(f"LLM bruto: '{raw}'")
 
-            # CASO 1: A IA identificou que é um comando direto de GESTO
-            if "GESTO:" in raw:
-                match = re.search(r"GESTO:\s*(\d+)", raw)
-                if match:
-                    gid = int(match.group(1))
-                    if 0 <= gid <= 16:
-                        return [gid]
-            
-            # CASO 2: A IA identificou que é uma resposta matemática/conhecimento
-            elif "VALOR:" in raw:
-                match = re.search(r"VALOR:\s*(\d+)", raw)
-                if match:
-                    valor = int(match.group(1))
-                    
-                    if valor == 0:
-                        return [0]
-                    
-                    # --- DECOMPOSIÇÃO FEITA PELO PYTHON (100% à prova de falhas) ---
-                    sequencia = []
-                    while valor > 5:
-                        sequencia.append(5)
-                        valor -= 5
-                    
-                    if valor > 0:
-                        sequencia.append(valor)
-                        
-                    return sequencia
-            
-            # Fallback de segurança se a IA não mandar o formato certo
-            elif raw.strip() == "15":
-                return [15]
+            # O modelo explicitamente não encontrou gesto
+            if "NENHUM" in raw:
+                return None
+
+            # Extrai o ID e valida contra a tabela real
+            match = re.search(r"GESTO:\s*(\d+)", raw)
+            if match:
+                gid = int(match.group(1))
+                if gid in GESTOS:          # <- aceita a biblioteca inteira (0-20, 100-120)
+                    return gid
+                logger.warning(f"LLM retornou ID {gid} fora da tabela GESTOS.")
 
         except Exception as e:
             logger.error(f"Erro ao chamar LLM: {e}")
         return None
 
     def _classificar_por_keywords(self, texto: str) -> Optional[int]:
-        """Fallback simples por palavras-chave caso o LLM falhe."""
+        """Fallback por palavras-chave (correspondência por palavra inteira)."""
         texto_lower = texto.lower()
         for gid, (_, keywords) in GESTOS.items():
-            if any(kw in texto_lower for kw in keywords):
-                logger.info(f"Keyword match: gesto {gid}")
-                return gid
+            for kw in keywords:
+                # Ignora keywords de 1 caractere: "i", "a", "o" casariam dentro
+                # de qualquer palavra ("oi", "a mão") e geram falsos positivos.
+                if len(kw) < 2:
+                    continue
+                # \b garante palavra/expressão inteira, não substring solta.
+                if re.search(rf"\b{re.escape(kw)}\b", texto_lower):
+                    logger.info(f"Keyword '{kw}' → gesto {gid}")
+                    return gid
         return None
 
     async def processar_comando(self, texto_usuario: str) -> Tuple[Optional[list], Optional[str], float]:
         """
-        Retorna (lista_de_ids, descricao_combinada, confianca).
+        Retorna (lista_de_ids, descricao, confianca).
+        A lista sempre tem no máximo 1 gesto (1 sinal por frase).
         """
         if not texto_usuario or not texto_usuario.strip():
             return None, None, 0.0
@@ -145,20 +178,17 @@ class MapeadorDeSinais:
         texto = texto_usuario.strip()
 
         # Estágio 1: LLM
-        gids = await self._classificar_com_llm(texto)
-        if gids:
-            # Pega a descrição de cada número na lista e junta tudo
-            descricoes = [GESTOS[g][0] for g in gids if g in GESTOS]
-            desc_combinada = " + ".join(descricoes)
-            logger.info(f"LLM → sequência {gids}: '{desc_combinada}'")
-            return gids, desc_combinada, 1.0
+        gid = await self._classificar_com_llm(texto)
+        if gid is not None:
+            desc = GESTOS[gid][0]
+            logger.info(f"LLM → gesto {gid}: '{desc}'")
+            return [gid], desc, 1.0
 
         # Estágio 2: fallback por palavras-chave
-        logger.warning("LLM falhou ou retornou vazio. Tentando fallback por keywords.")
+        logger.warning("LLM não retornou gesto. Tentando fallback por keywords.")
         gid_fallback = self._classificar_por_keywords(texto)
         if gid_fallback is not None:
             desc = GESTOS[gid_fallback][0]
-            # Retorna como uma lista de 1 item para manter a compatibilidade
             return [gid_fallback], desc, 0.75
 
         logger.warning(f"Nenhum gesto reconhecido para: '{texto}'")
