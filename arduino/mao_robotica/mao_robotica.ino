@@ -47,7 +47,8 @@ void setup()
 
   // Valor inicial da característica
   comandoCharacteristic.writeValue(5); // Começa no 5 (Mão aberta)
-
+  Serial.print("Endereço MAC atual: ");
+  Serial.println(BLE.address());
   BLE.advertise();
   Serial.println("Bluetooth ativo! Aguardando o backend conectar...");
 }
@@ -111,19 +112,22 @@ void executarComando(byte comando) {
     libras_agua();
   } else if (base == 19) {
     aspas();
-  }
-
-  delay(1200);      // Aguarda um tempo de leitura confortável
-
-  // 2. Resolve o movimento do pulso
-  if (oscilar) {
+  } else if(base == 20) {
+    configurarDedos(5);
     oscilarPulso();
-  } else {
-    pulso.write(140); // Fixa o pulso na posição de descanso
-    delay(1500);      // Aguarda um tempo de leitura confortável
   }
 
-  delay(1000);      // Aguarda um tempo de leitura confortável
+  // delay(1200);      // Aguarda um tempo de leitura confortável
+
+  // // 2. Resolve o movimento do pulso
+  // if (oscilar) {
+  //   oscilarPulso();
+  // } else {
+  //   pulso.write(100); // Fixa o pulso na posição de descanso
+  //   delay(1500);      // Aguarda um tempo de leitura confortável
+  // }
+
+  delay(800);      // Aguarda um tempo de leitura confortável
   // 3. Ao finalizar a ação, volta à posição de descanso
   abrirMao();
 }
@@ -171,7 +175,7 @@ void configurarDedos(byte base) {
 }
 void abrirMao() {
   configurarDedos(5); // CM-005 é a mão espalmada
-  pulso.write(140);
+  pulso.write(100);
 }
 
 void moverSuave(Servo &s, int alvo, int passo, int atraso) {
@@ -194,8 +198,8 @@ void moverSuave(Servo &s, int alvo, int passo, int atraso) {
 
 void oscilarPulso() {
   for (int i = 0; i < 2; i++) {
-    moverSuave(pulso, 0,  2, 30);   // sobe suave
-    moverSuave(pulso, 140, 2, 30);   // desce suave
+    moverSuave(pulso, 0,  2, 10);   // sobe suave
+    moverSuave(pulso, 160, 2, 10);   // desce suave
   }
 }
 
@@ -208,7 +212,7 @@ void libras_agua() {
   anelar.write(180);
   meio.write(180);
   polegar.write(180);
-  pulso.write(140);
+  pulso.write(100);
   delay(300);
   
   // Indicador batendo repetidas vezes
@@ -224,7 +228,7 @@ void aspas() {
   mindinho.write(180); 
   anelar.write(180);
   polegar.write(0);
-  pulso.write(120);
+  pulso.write(100);
 
   // Médio e Indicador dobram ao mesmo tempo
   for(int i = 0; i < 2; i++) {
@@ -235,4 +239,8 @@ void aspas() {
     indicador.write(0);   // Fechado
     delay(1000);
   }
+
+  meio.write(0);       // Aberto
+  indicador.write(180);
+
 }

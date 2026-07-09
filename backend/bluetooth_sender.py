@@ -6,7 +6,7 @@ UUID_COMANDO = "19b10001-e8f2-537e-4f6c-d104768a1214"
 ble_client = None
 
 # Mude para False quando for testar com o Arduino físico!
-MOCK_BLE = True
+MOCK_BLE = False
 
 async def conectar_bluetooth():
     """Função chamada quando o servidor liga para abrir a conexão."""

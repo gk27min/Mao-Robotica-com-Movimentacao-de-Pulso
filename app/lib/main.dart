@@ -12,7 +12,7 @@ void main() {
 }
 
 Future<bool> enviarGestoDiretoParaServidor(int comando) async {
-  const String serverUrl = 'http://10.9.5.66:5000/api/gesto'; // <-- /api/gesto
+  const String serverUrl = 'http://192.168.1.4:5000/api/gesto'; // <-- /api/gesto
   final url = Uri.parse(serverUrl);
 
   try {
@@ -242,7 +242,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // Endereço IP do servidor Python na rede local.
-  static const String _serverUrl = 'http://10.9.5.66:5000/api/comando';
+  static const String _serverUrl = 'http://192.168.1.4:5000/api/comando';
 
   Future<void> enviarComandoParaServidor(String texto, int messageIndex) async {
     final url = Uri.parse(_serverUrl);

@@ -12,7 +12,7 @@ GESTOS = {
     # BLOCO 1: ESTÁTICOS (Pulso Fixo) -> 0 a 17
     # ==========================================
     0: ("CM - 000: Mão totalmente fechada", ["fechar", "punho", "zero", "fechada"]),
-    1: ("CM - 001: Dedo indicador", ["apontar", "indicador", "ponto", "direção"]),
+    1: ("CM - 001: Dedo indicador", ["apontar", "indicador", "ponto", "direção", "um", "1"]),
     2: ("CM - 002: Indicador e médio", ["paz", "vitoria", "vitória", "peace", "victory"]),
     3: ("CM - 003: Indicador, médio e anelar", ["tres", "três"]),
     4: ("CM - 004: Indicador, médio, anelar e mindinho", ["quatro"]),
@@ -35,33 +35,34 @@ GESTOS = {
     # ==========================================
     18: ("CM - 018: Sinal de Água (Indicador batendo repetidas vezes)", ["agua", "água", "sede", "beber"]),
     19: ("CM - 019: Sinal de Aspas (Indicador e médio dobrando repetidas vezes)", ["aspas", "citação", "quote", "entre aspas"]),
-    20: ("CM - 020: Reservado para futuros", ["reservado"]),
+    20: ("CM - 105: Todos os dedos com oscilação (Aceno)", ["aceno", "acenar", "tchau", "oi", "olá", "ola", "hello", "wave", "saudação", "cumprimentar", "e ai", "e aí"]),
+    # 20: ("CM - 020: Reservado para futuros", ["reservado"]),
+    # 22: ("CM - 117: Letra H em LIBRAS (Base do H com rotação do pulso)", ["letra h", "libras h"]),
 
     # ==========================================
     # BLOCO 2: DINÂMICOS (Com oscilação do pulso) -> 100 a 120
     # ==========================================
-    100: ("CM - 100: Mão totalmente fechada com oscilação", ["bater", "soco", "bater na porta"]),
-    101: ("CM - 101: Dedo indicador com oscilação (Sinal de Não)", ["nao", "não", "negativo", "recusa", "discordo", "rejeitar"]),
-    102: ("CM - 102: Indicador e médio com oscilação", ["observar", "olhar"]),
-    103: ("CM - 103: Indicador, médio e anelar com oscilação", ["tres balançando"]),
-    104: ("CM - 104: Indicador, médio, anelar e mindinho com oscilação", ["quatro balançando"]),
-    105: ("CM - 105: Todos os dedos com oscilação (Aceno)", ["aceno", "acenar", "tchau", "oi", "olá", "ola", "hello", "wave", "saudação", "cumprimentar", "e ai", "e aí"]),
-    106: ("CM - 106: Polegar, indicador e mindinho com oscilação", ["te amo balançando", "ily com movimento"]),
-    107: ("CM - 107: Polegar com oscilação", ["joinha balançando", "positivo balançando"]),
-    108: ("CM - 108: Dedo médio com oscilação", ["médio balançando"]),
-    109: ("CM - 109: Polegar e mindinho com oscilação", ["shaka balançando", "telefone balançando"]),
-    110: ("CM - 110: Indicador e mindinho com oscilação", ["rock balançando"]),
-    111: ("CM - 111: Mindinho com oscilação", ["mindinho balançando"]),
-    112: ("CM - 112: Polegar e indicador com oscilação", ["letra l balançando"]),
-    113: ("CM - 113: Médio, anelar e mindinho com oscilação", ["ok balançando"]),
-    114: ("CM - 114: Letra C com oscilação do pulso", ["c balançando"]),
-    115: ("CM - 115: Letra A com oscilação do pulso", ["a balançando"]),
-    116: ("CM - 116: Letra O com oscilação do pulso", ["o balançando"]),
-    117: ("CM - 117: Letra H em LIBRAS (Base do H com rotação do pulso)", ["letra h", "libras h"]),
-    118: ("CM - 118: Sinal de Água com oscilação do pulso", ["agua balançando"]),
-    119: ("CM - 119: Sinal de Aspas com oscilação do pulso", ["aspas balançando"]),
-    120: ("CM - 120: Reservado com oscilação", ["reservado balançando"]),
+    # 100: ("CM - 100: Mão totalmente fechada com oscilação", ["bater", "soco", "bater na porta"]),
+    # 101: ("CM - 101: Dedo indicador com oscilação (Sinal de Não)", ["nao", "não", "negativo", "recusa", "discordo", "rejeitar"]),
+    # 102: ("CM - 102: Indicador e médio com oscilação", ["observar", "olhar"]),
+    # 103: ("CM - 103: Indicador, médio e anelar com oscilação", ["tres balançando"]),
+    # 104: ("CM - 104: Indicador, médio, anelar e mindinho com oscilação", ["quatro balançando"]),
+    # 106: ("CM - 106: Polegar, indicador e mindinho com oscilação", ["te amo balançando", "ily com movimento"]),
+    # 107: ("CM - 107: Polegar com oscilação", ["joinha balançando", "positivo balançando"]),
+    # 108: ("CM - 108: Dedo médio com oscilação", ["médio balançando"]),
+    # 109: ("CM - 109: Polegar e mindinho com oscilação", ["shaka balançando", "telefone balançando"]),
+    # 110: ("CM - 110: Indicador e mindinho com oscilação", ["rock balançando"]),
+    # 111: ("CM - 111: Mindinho com oscilação", ["mindinho balançando"]),
+    # 112: ("CM - 112: Polegar e indicador com oscilação", ["letra l balançando"]),
+    # 113: ("CM - 113: Médio, anelar e mindinho com oscilação", ["ok balançando"]),
+    # 114: ("CM - 114: Letra C com oscilação do pulso", ["c balançando"]),
+    # 115: ("CM - 115: Letra A com oscilação do pulso", ["a balançando"]),
+    # 116: ("CM - 116: Letra O com oscilação do pulso", ["o balançando"]),
+    # 118: ("CM - 118: Sinal de Água com oscilação do pulso", ["agua balançando"]),
+    # 119: ("CM - 119: Sinal de Aspas com oscilação do pulso", ["aspas balançando"]),
+    # 120: ("CM - 120: Reservado com oscilação", ["reservado balançando"]),
 }
+
 LLM_MODEL = "llama3.1"
 
 # Bloco de texto que descreve os gestos, reutilizado no prompt do LLM
@@ -72,11 +73,12 @@ _GESTOS_PROMPT = "\n".join(
 _PROMPT_TEMPLATE = """\
 Você é o controlador de uma mão robótica de LIBRAS.
 Sua tarefa: dada a frase do usuário, escolher O ÚNICO gesto da lista abaixo
-que melhor representa o que a frase quer dizer.
+que melhor representa o que a frase quer dizer. 
+REGRA EXTRA: Se o usuário pedir o resultado de uma soma ou subtração simples, resolva a conta matematicamente. Se o resultado for de 0 a 5, retorne o ID correspondente ao resultado numérico.
 
 Sua ÚNICA saída permitida é uma destas duas formas:
   - "GESTO: <ID>"  (usando um ID que EXISTE na lista abaixo)
-  - "NENHUM"       (quando nada na lista se encaixa na frase)
+  - "NENHUM"       (quando nada na lista se encaixa na frase, ou se o resultado da conta for menor que 0 ou maior que 5)
 PROIBIDO escrever qualquer outra coisa, explicação ou texto extra.
 
 GESTOS DISPONÍVEIS (ID: Descrição):
@@ -85,6 +87,15 @@ GESTOS DISPONÍVEIS (ID: Descrição):
 EXEMPLOS (siga exatamente este formato):
 Entrada: "Oi"
 Saída: GESTO: 105
+
+Entrada: "Quanto é 1 + 1?"
+Saída: GESTO: 2
+
+Entrada: "3 - 3"
+Saída: GESTO: 0
+
+Entrada: "soma 2 mais 3"
+Saída: GESTO: 5
 
 Entrada: "Tchau, até mais"
 Saída: GESTO: 105
@@ -108,6 +119,9 @@ Entrada: "Não"
 Saída: GESTO: 101
 
 Entrada: "asdfghjkl"
+Saída: NENHUM
+
+Entrada: "5 + 5"
 Saída: NENHUM
 
 Entrada: "{texto}"
