@@ -1,0 +1,85 @@
+<!DOCTYPE html><html><head><meta charset='utf-8'><style>
+@page { size: A4; margin: 1.8cm 1.6cm; @bottom-center { content: counter(page) " / " counter(pages); font-size:9px; color:#888; } }
+* { box-sizing: border-box; }
+body { font-family: 'DejaVu Sans', 'Noto Sans', Arial, sans-serif; font-size: 10.5px; line-height: 1.5; color:#1f2430; }
+h1 { color:#5b2a86; font-size: 22px; border-bottom:3px solid #6200EA; padding-bottom:6px; }
+h2 { color:#5b2a86; font-size: 15px; margin-top:22px; border-bottom:1px solid #ddd; padding-bottom:3px; }
+h3 { color:#6a3aa0; font-size: 12.5px; margin-top:16px; }
+h4 { color:#333; font-size: 11px; }
+a { color:#6200EA; text-decoration:none; word-break:break-all; }
+code { background:#f3f0fa; color:#5b2a86; padding:1px 4px; border-radius:3px; font-family:'DejaVu Sans Mono',monospace; font-size:9.5px; }
+pre { background:#f6f6fb; border:1px solid #e4e0f0; border-radius:6px; padding:10px; overflow-x:auto; font-size:8.6px; line-height:1.35; }
+pre code { background:none; color:#2a2a33; padding:0; }
+table { border-collapse:collapse; width:100%; margin:10px 0; font-size:9.4px; }
+th, td { border:1px solid #d9d4e8; padding:5px 7px; text-align:left; vertical-align:top; }
+th { background:#efeaf8; color:#4a2270; }
+tr:nth-child(even) td { background:#faf9fd; }
+img { max-width:100%; border-radius:6px; }
+blockquote { border-left:4px solid #b79fe0; background:#f7f4fc; margin:10px 0; padding:6px 12px; color:#4a4a55; }
+p em { color:#666; }
+hr { border:none; border-top:1px solid #e0dcec; margin:16px 0; }
+</style></head><body><h1 id="mao-robotica-com-movimentacao-de-pulso-libras-bot-falacomamao">🤖 Mão Robótica com Movimentação de Pulso — LIBRAS-BOT / FalaComaMão</h1>
+<blockquote>
+<p>Protótipo de mão robótica de baixo custo, com cinco dedos funcionais e rotação de
+pulso, capaz de reproduzir configurações de mão (CMs) da <strong>Língua Brasileira de Sinais
+(LIBRAS)</strong> a partir de comandos de <strong>voz ou texto</strong>, interpretados por um modelo de
+linguagem (LLM) local.</p>
+</blockquote>
+<p>Projeto desenvolvido para a disciplina de <strong>Projeto Integrado em Computação II (PIC2)</strong>
+do curso de <strong>Engenharia de Computação</strong> da <strong>Universidade Federal do Espírito Santo
+(UFES)</strong>.</p>
+<p><strong>Status do projeto:</strong> ✅ <strong>Finalizado / funcional.</strong></p>
+<p>🔗 <strong>Repositório público (GitHub):</strong>
+<a href="https://github.com/gk27min/Mao-Robotica-com-Movimentacao-de-Pulso">https://github.com/gk27min/Mao-Robotica-com-Movimentacao-de-Pulso</a></p>
+<p align="center">
+  <img src="imagens/ENUY2745.JPG" alt="Protótipo montado da mão robótica com pulso" width="45%">
+  <img src="imagens/DSRJ0243.JPG" alt="Mão robótica conectada ao Arduino, fonte e notebook na bancada" width="45%">
+</p>
+<p align="center"><em>Protótipo final montado e a bancada de operação (Arduino Uno R4 WiFi, fonte, protoboard e servidor Python no notebook).</em></p>
+
+<hr />
+<h2 id="indice">📑 Índice</h2>
+<ol>
+<li><a href="#-visão-geral">Visão geral</a></li>
+<li><a href="#-como-funciona-fluxo-end-to-end">Como funciona (fluxo end-to-end)</a></li>
+<li><a href="#-arquitetura-do-sistema">Arquitetura do sistema</a></li>
+<li><a href="#-o-que-foi-feito">O que foi feito</a></li>
+<li><a href="#-o-que-foi-usado-tecnologias">O que foi usado (tecnologias)</a></li>
+<li><a href="#-lista-de-equipamentos-e-componentes-bom">Lista de equipamentos e componentes (BOM)</a></li>
+<li><a href="#-hardware-e-ligações">Hardware e ligações</a></li>
+<li><a href="#-modelos-3d-e-peças-impressas">Modelos 3D e peças impressas</a></li>
+<li><a href="#-código-fonte--organização-do-repositório">Código-fonte — organização do repositório</a></li>
+<li><a href="#-guia-de-recriação-passo-a-passo">Guia de recriação (passo a passo)</a></li>
+<li><a href="#-biblioteca-de-gestos-cms">Biblioteca de gestos (CMs)</a></li>
+<li><a href="#-dificuldades-de-desenvolvimento">Dificuldades de desenvolvimento</a></li>
+<li><a href="#-vídeos-e-imagens-de-demonstração">Vídeos e imagens de demonstração</a></li>
+<li><a href="#-equipe-e-créditos">Equipe e créditos</a></li>
+</ol>
+<hr />
+<h2 id="visao-geral">🔎 Visão geral</h2>
+<p>A <strong>FalaComaMão</strong> é uma mão robótica antropomórfica impressa em 3D que traduz linguagem
+natural em gestos de LIBRAS. O usuário fala ou digita uma frase no aplicativo; um LLM
+rodando <strong>localmente</strong> interpreta a intenção e a converte em um código de gesto; esse
+código é enviado por rede até um servidor Python, que o retransmite via <strong>Bluetooth Low
+Energy (BLE)</strong> para um Arduino, o qual aciona os seis servomotores para reproduzir a
+configuração de mão correspondente.</p>
+<p>O foco do projeto é <strong>acessibilidade e comunicação</strong> a um <strong>custo muito inferior</strong> ao de
+soluções comerciais, usando exclusivamente hardware aberto, impressão 3D e software livre.</p>
+<hr />
+<h2 id="como-funciona-fluxo-end-to-end">⚙️ Como funciona (fluxo end-to-end)</h2>
+<pre><code>┌─────────────┐   Voz/Texto   ┌──────────────────┐   HTTP/JSON   ┌─────────────────┐
+│  App Flutter │ ────────────► │  Servidor Python │ ────────────► │  LLM local       │
+│ (FalaComaMão)│   /api/comando│    (FastAPI)     │               │  Ollama (llama3.1)│
+└─────────────┘               └──────────────────┘◄────────────  └─────────────────┘
+       ▲                              │   código do gesto (ex.: 7)
+       │ feedback no chat             │
+       │                              ▼  BLE (bytearray[código])
+       │                       ┌──────────────────┐    PWM     ┌─────────────────┐
+       └───────────────────────│  Arduino Uno R4  │ ─────────► │ 6× Servo MG995   │
+                               │      WiFi (BLE)  │            │ (5 dedos + pulso)│
+                               └──────────────────┘            └─────────────────┘
+</code></pre>
+<ol>
+<li><strong>Captura</strong> — o app captura a fala (Speech-to-Text nativo) ou o texto digitado.</li>
+<li><strong>Interpretação</strong> — o servidor Python envia a frase ao *</li>
+</ol></body></html>
